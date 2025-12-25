@@ -8,6 +8,7 @@ from rest_framework import viewsets, mixins
 from rest_framework.permissions import AllowAny
 
 from core.models import Collision, CityDailyWeather, Quadrant, WeatherDay
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 from .serializers import (
     CollisionListSerializer,
     CollisionDetailSerializer,
@@ -55,6 +56,7 @@ def _filtered_collisions(request: HttpRequest):
 class StatsMonthlyTrend(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         # Sum counts by existing month field
@@ -68,6 +70,7 @@ class StatsMonthlyTrend(APIView):
 class StatsByHour(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         commute = (request.GET.get("commute") or "").lower().strip()
         qs = _filtered_collisions(request)
@@ -88,6 +91,7 @@ class StatsByHour(APIView):
 class StatsWeekday(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         data = qs.values("weekday").annotate(total=Sum("count")).order_by("weekday")
@@ -99,6 +103,7 @@ class StatsWeekday(APIView):
 class StatsQuadrantShare(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         data = qs.values("quadrant").annotate(total=Sum("count")).order_by("quadrant")
@@ -112,6 +117,7 @@ class StatsQuadrantShare(APIView):
 class StatsTopIntersections(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         try:
             limit = int(request.GET.get("limit", 10))
@@ -140,6 +146,7 @@ class StatsTopIntersections(APIView):
 class StatsByWeather(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         # Join via date to CityDailyWeather for city-level weather day
@@ -198,6 +205,7 @@ def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
 class CollisionsNear(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request: HttpRequest):
         # Parse inputs
         try:

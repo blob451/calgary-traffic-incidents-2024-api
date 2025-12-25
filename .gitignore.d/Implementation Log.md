@@ -200,3 +200,20 @@ Verification
 
 Notes
 - Tests avoid large data loads; use factories and tiny CSV fixtures to validate behavior deterministically.
+
+---
+
+## Stage 8 — Docs, Packaging, Submission
+
+Changes
+- README overhaul: Quick start, dataset loading, example endpoints, testing, OpenAPI export, admin creation, submission guidance.
+- Index page updated with live links to common endpoints and filters, plus near collisions example.
+- OpenAPI schema export generated with `python manage.py spectacular --file schema.yaml`.
+- Added `extend_schema` annotations to APIView stats/near endpoints to provide schema without guessing errors.
+
+Verification
+- `python manage.py spectacular --file schema.yaml` runs without schema errors.
+- `python manage.py check` continues to pass.
+
+Notes
+- Submission branch should include pre-seeded `db.sqlite3` and the exported `schema.yaml`. Admin credentials must be documented in the report, not in code.

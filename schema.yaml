@@ -1,0 +1,676 @@
+openapi: 3.0.3
+info:
+  title: Calgary Traffic Incidents 2024 API
+  version: 0.1.0
+  description: Django + DRF API with weather integration and OpenAPI docs.
+paths:
+  /api/schema/:
+    get:
+      operationId: api_schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - ht
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/collisions/:
+    get:
+      operationId: api_v1_collisions_list
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: string
+      - in: query
+        name: from_date
+        schema:
+          type: string
+          format: date
+        description: from
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: string
+      - in: query
+        name: heavy_snow
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to_date
+        schema:
+          type: string
+          format: date
+        description: to
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCollisionListList'
+          description: ''
+  /api/v1/collisions/{collision_id}/:
+    get:
+      operationId: api_v1_collisions_retrieve
+      parameters:
+      - in: path
+        name: collision_id
+        schema:
+          type: string
+          pattern: ^[^/]+$
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollisionDetail'
+          description: ''
+  /api/v1/collisions/near:
+    get:
+      operationId: api_v1_collisions_near_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/flags/:
+    get:
+      operationId: api_v1_flags_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFlagList'
+          description: ''
+    post:
+      operationId: api_v1_flags_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Flag'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Flag'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Flag'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flag'
+          description: ''
+  /api/v1/stats/by-hour:
+    get:
+      operationId: api_v1_stats_by_hour_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/stats/by-weather:
+    get:
+      operationId: api_v1_stats_by_weather_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/stats/monthly-trend:
+    get:
+      operationId: api_v1_stats_monthly_trend_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/stats/quadrant-share:
+    get:
+      operationId: api_v1_stats_quadrant_share_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/stats/top-intersections:
+    get:
+      operationId: api_v1_stats_top_intersections_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/stats/weekday:
+    get:
+      operationId: api_v1_stats_weekday_retrieve
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    CollisionDetail:
+      type: object
+      properties:
+        collision_id:
+          type: string
+          maxLength: 64
+        occurred_at:
+          type: string
+          format: date-time
+        date:
+          type: string
+          format: date
+        hour:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        weekday:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        quadrant:
+          $ref: '#/components/schemas/QuadrantEnum'
+        longitude:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+        count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        location_text:
+          type: string
+          maxLength: 255
+        nearest_station:
+          allOf:
+          - $ref: '#/components/schemas/WeatherStation'
+          readOnly: true
+        description:
+          type: string
+        intersection_key:
+          type: string
+          maxLength: 64
+        station_weather:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        city_weather:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+      required:
+      - city_weather
+      - collision_id
+      - date
+      - latitude
+      - longitude
+      - nearest_station
+      - occurred_at
+      - station_weather
+    CollisionList:
+      type: object
+      properties:
+        collision_id:
+          type: string
+          maxLength: 64
+        occurred_at:
+          type: string
+          format: date-time
+        date:
+          type: string
+          format: date
+        hour:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        weekday:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        quadrant:
+          $ref: '#/components/schemas/QuadrantEnum'
+        longitude:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+        count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        location_text:
+          type: string
+          maxLength: 255
+        nearest_station:
+          allOf:
+          - $ref: '#/components/schemas/WeatherStation'
+          readOnly: true
+      required:
+      - collision_id
+      - date
+      - latitude
+      - longitude
+      - nearest_station
+      - occurred_at
+    Flag:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        collision:
+          type: string
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - collision
+      - created_at
+      - id
+      - note
+    PaginatedCollisionListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollisionList'
+    PaginatedFlagList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flag'
+    QuadrantEnum:
+      enum:
+      - NW
+      - NE
+      - SW
+      - SE
+      - UNK
+      type: string
+      description: |-
+        * `NW` - NW
+        * `NE` - NE
+        * `SW` - SW
+        * `SE` - SE
+        * `UNK` - Unknown
+    WeatherStation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        climate_id:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 128
+        longitude:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+      required:
+      - climate_id
+      - id
+      - latitude
+      - longitude
+      - name
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

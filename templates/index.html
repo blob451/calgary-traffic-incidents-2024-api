@@ -28,14 +28,20 @@
 
     <section>
       <h2>Example Endpoints</h2>
-      <p>Endpoints will be populated as implementation progresses.</p>
       <ul>
-        <li>List collisions (coming soon): <code>/api/v1/collisions</code></li>
-        <li>Stats (monthly trend, coming soon): <code>/api/v1/stats/monthly-trend</code></li>
+        <li><a href="/api/v1/collisions">List collisions</a></li>
+        <li><a href="/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE">Filter by date + quadrant</a></li>
+        <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
+        <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
+        <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
+        <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
+        <li><a href="/api/v1/stats/quadrant-share">Stats: quadrant share</a></li>
+        <li><a href="/api/v1/stats/top-intersections?limit=10">Stats: top intersections</a></li>
+        <li><a href="/api/v1/stats/by-weather">Stats: by weather</a></li>
+        <li><a href="/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5">Near collisions (1.5 km)</a></li>
       </ul>
     </section>
 
-    <footer style="margin-top:2rem; color:#666">Stage 1 scaffold complete.</footer>
+    <footer style="margin-top:2rem; color:#666">Stages 1–8 ready for review.</footer>
   </body>
   </html>
-
