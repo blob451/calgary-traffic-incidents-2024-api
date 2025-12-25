@@ -20,6 +20,8 @@ class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
         Collision.objects.select_related("nearest_station").order_by("-occurred_at")
     )
     permission_classes = [AllowAny]
+    lookup_field = "collision_id"
+    lookup_value_regex = r"[^/]+"
     filterset_class = CollisionFilter
     search_fields = ["description", "location_text"]
     ordering_fields = ["occurred_at", "date", "quadrant", "count"]

@@ -120,7 +120,7 @@ class Flag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"Flag for {self.collision_id if hasattr(self, 'collision_id') else self.collision_id}"  # type: ignore
+        return f"Flag for {self.collision.collision_id}"
 
 
 # Create your models here.

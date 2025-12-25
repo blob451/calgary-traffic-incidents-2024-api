@@ -110,19 +110,33 @@ class Command(BaseCommand):
                 if not climate_id:
                     # Skip rows without climate id
                     continue
-                st_defaults = {"name": name}
-                if lon is not None:
-                    st_defaults["longitude"] = lon
-                if lat is not None:
-                    st_defaults["latitude"] = lat
-                station, st_created = WeatherStation.objects.update_or_create(
-                    climate_id=climate_id,
-                    defaults=st_defaults,
-                )
-                if st_created:
+                # Upsert station, ensuring required lon/lat on create
+                station = WeatherStation.objects.filter(climate_id=climate_id).first()
+                if station is None:
+                    if lon is None or lat is None:
+                        # cannot create without coordinates; skip until a row provides them
+                        continue
+                    station = WeatherStation.objects.create(
+                        climate_id=climate_id,
+                        name=name,
+                        longitude=lon,
+                        latitude=lat,
+                    )
                     created_st += 1
                 else:
-                    updated_st += 1
+                    changed = False
+                    if name and station.name != name:
+                        station.name = name
+                        changed = True
+                    if lon is not None and station.longitude != lon:
+                        station.longitude = lon
+                        changed = True
+                    if lat is not None and station.latitude != lat:
+                        station.latitude = lat
+                        changed = True
+                    if changed:
+                        station.save(update_fields=["name", "longitude", "latitude"])
+                        updated_st += 1
 
                 # Observation fields
                 date_str = _get(row, ["Date/Time", "Date"])
@@ -154,8 +168,14 @@ class Command(BaseCommand):
                     weather_day = WeatherDay.SNOWY
                 elif precip is not None and precip >= 0.2:
                     weather_day = WeatherDay.WET
-                else:
+                elif (
+                    precip is not None and precip == 0.0
+                ) and (
+                    snow is not None and snow == 0.0
+                ):
                     weather_day = WeatherDay.DRY
+                else:
+                    weather_day = None
 
                 freeze_day = None
                 if t_min is not None:
@@ -183,4 +203,3 @@ class Command(BaseCommand):
                     updated_obs += 1
 
         return created_st, updated_st, created_obs, updated_obs
-
