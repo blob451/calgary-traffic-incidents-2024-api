@@ -127,6 +127,29 @@ Verification
 
 ## Next Steps (Per Plan)
 
-- Stage 5/6: Implement stats endpoints (monthly trend, by hour, weekday, quadrant share, top intersections, by-weather, near) with filters.
+- Stage 6: Implement remaining stats (e.g., near radius).
 - Stage 7: Add tests (models, loaders, endpoints) using `pytest` + factories.
 - Stage 8: README quick start, OpenAPI export, seed DB on submission branch, report/video.
+
+---
+
+## Stage 5 — Stats Endpoints
+
+Changes
+- Added stats APIs under `/api/v1/stats/`:
+  - `monthly-trend`: sums `count` by calendar month (1–12) with zero-fill for absent months.
+  - `by-hour`: sums `count` by hour (0–23) with optional `commute=am|pm` filters.
+  - `weekday`: sums by weekday (0–6, Mon–Sun).
+  - `quadrant-share`: counts by `quadrant` (NW/NE/SW/SE/UNK).
+  - `top-intersections?limit=10`: ranks by `intersection_key`/`location_text` with cap 100.
+  - `by-weather`: maps collision totals by date to `CityDailyWeather.weather_day_city` and aggregates Dry/Wet/Snowy totals.
+- Reuse `CollisionFilter` for consistent filtering across stats endpoints.
+- Wired routes in `api/urls.py` and implemented APIView classes in `api/views.py`.
+
+Verification
+- `python manage.py check` → OK.
+- Local manual smoke via dev server recommended (list/detail/stats endpoints respond and shape matches specs).
+
+Notes
+- All stats endpoints respect the same filters as `/api/v1/collisions` (date range, quadrant, weather conditions, gust threshold, station, text search for relevant ones).
+- `near` endpoint remains for Stage 6 per plan.
