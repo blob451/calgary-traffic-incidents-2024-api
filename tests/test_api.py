@@ -1,0 +1,68 @@
+import pytest
+from rest_framework.test import APIClient
+
+from .factories import CollisionFactory, FlagFactory, CityDailyWeatherFactory
+from core.models import Flag, WeatherDay
+
+
+@pytest.mark.django_db
+def test_collisions_list_detail_and_flag():
+    c1 = CollisionFactory()
+    c2 = CollisionFactory()
+    c3 = CollisionFactory()
+
+    client = APIClient()
+
+    # List
+    resp = client.get("/api/v1/collisions/")
+    assert resp.status_code == 200
+    assert "results" in resp.json()
+    assert len(resp.json()["results"]) >= 3
+
+    # Detail by collision_id
+    resp = client.get(f"/api/v1/collisions/{c1.collision_id}/")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["collision_id"] == c1.collision_id
+    assert "city_weather" in payload
+
+    # Create flag
+    resp = client.post(
+        "/api/v1/flags/",
+        {"collision": c1.collision_id, "note": "hazard present"},
+        format="json",
+    )
+    assert resp.status_code in (200, 201)
+    assert Flag.objects.filter(collision=c1).exists()
+
+
+@pytest.mark.django_db
+def test_filters_and_stats_endpoints():
+    # Create collisions on two dates and quadrants
+    c1 = CollisionFactory(quadrant="NE")
+    c2 = CollisionFactory(quadrant="SW")
+    # City weather for those dates
+    CityDailyWeatherFactory(date=c1.date, weather_day_city=WeatherDay.DRY)
+    CityDailyWeatherFactory(date=c2.date, weather_day_city=WeatherDay.WET)
+
+    client = APIClient()
+
+    # Filter by quadrant
+    r = client.get("/api/v1/collisions/?quadrant=NE")
+    assert r.status_code == 200
+    results = r.json()["results"]
+    assert any(row["quadrant"] == "NE" for row in results)
+
+    # Stats endpoints respond
+    for path in [
+        "/api/v1/stats/monthly-trend",
+        "/api/v1/stats/by-hour",
+        "/api/v1/stats/weekday",
+        "/api/v1/stats/quadrant-share",
+        "/api/v1/stats/top-intersections",
+        "/api/v1/stats/by-weather",
+    ]:
+        resp = client.get(path)
+        assert resp.status_code == 200, path
+        assert "results" in resp.json(), path
+

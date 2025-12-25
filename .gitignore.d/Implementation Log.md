@@ -177,3 +177,26 @@ Notes
 
 - Stage 7: Add tests (models, serializers, loaders, endpoints—including stats and near) using `pytest` + factories.
 - Stage 8: README quick start, OpenAPI export, seed DB on submission branch, report/video.
+
+---
+
+## Stage 7 — Tests (pytest + pytest-django)
+
+Changes
+- Configure pytest for Django: add `pytest.ini` with `DJANGO_SETTINGS_MODULE=calgary_collisions.settings`.
+- Add factories in `tests/factories.py` for `WeatherStation`, `WeatherObservation`, `CityDailyWeather`, `Collision`, `Flag`.
+- Tests added:
+  - `tests/test_models.py`: unique constraints for `Collision.collision_id` and `WeatherObservation (station, date)`.
+  - `tests/test_commands.py`: small CSV fixtures written to tmp paths; verify `load_weather` and `load_collisions` create expected rows.
+  - `tests/test_api.py`: list/detail collisions, create flag (POST), basic filters, and stats endpoints return expected shapes.
+  - `tests/test_near.py`: verify near endpoint constraints (radius, sorted by distance, within radius).
+
+Verification
+- Ran `pytest` locally: all tests green.
+- Fixed a couple of issues during testing:
+  - Monthly stats annotation name conflicted with the `Collision.month` field; changed to aggregate by existing `month` field.
+  - Absolute path handling in `load_collisions --csv` adjusted to accept direct file paths in addition to glob patterns.
+  - Typo in by-weather stats dict comprehension corrected.
+
+Notes
+- Tests avoid large data loads; use factories and tiny CSV fixtures to validate behavior deterministically.

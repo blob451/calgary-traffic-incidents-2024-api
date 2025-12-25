@@ -57,13 +57,8 @@ class StatsMonthlyTrend(APIView):
 
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
-        # Annotate month and sum counts
-        data = (
-            qs.annotate(month=ExtractMonth("date"))
-            .values("month")
-            .annotate(total=Sum("count"))
-            .order_by("month")
-        )
+        # Sum counts by existing month field
+        data = qs.values("month").annotate(total=Sum("count")).order_by("month")
         # Ensure months 1..12 present
         by_month = {row["month"]: row["total"] for row in data}
         out = [{"month": m, "total": int(by_month.get(m, 0) or 0)} for m in range(1, 13)]
@@ -159,10 +154,10 @@ class StatsByWeather(APIView):
         # count collisions grouped by date, then map to weather_day_city
         per_date = qs.values("date").annotate(total=Sum("count"))
         weather_by_date = {
-            d["date"]: d2["weather_day_city"]
-            for d2 in CityDailyWeather.objects.filter(date__in=[p["date"] for p in per_date]).values(
-                "date", "weather_day_city"
-            )
+            d2["date"]: d2["weather_day_city"]
+            for d2 in CityDailyWeather.objects.filter(
+                date__in=[p["date"] for p in per_date]
+            ).values("date", "weather_day_city")
         }
         for row in per_date:
             day = weather_by_date.get(row["date"]) or None

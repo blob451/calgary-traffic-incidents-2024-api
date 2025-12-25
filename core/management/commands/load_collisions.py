@@ -105,7 +105,12 @@ class Command(BaseCommand):
         files: list[Path] = []
         if csv_globs:
             for pattern in csv_globs:
-                files.extend(Path().glob(pattern))
+                p = Path(pattern)
+                if p.exists():
+                    files.append(p)
+                else:
+                    # relative glob pattern
+                    files.extend(Path().glob(str(pattern)))
         else:
             files = sorted(directory.glob("Traffic_Incidents_*.csv"))
 
@@ -197,4 +202,3 @@ class Command(BaseCommand):
             )
         )
         return 0
-
