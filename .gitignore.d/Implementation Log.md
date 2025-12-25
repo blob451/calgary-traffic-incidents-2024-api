@@ -153,3 +153,27 @@ Verification
 Notes
 - All stats endpoints respect the same filters as `/api/v1/collisions` (date range, quadrant, weather conditions, gust threshold, station, text search for relevant ones).
 - `near` endpoint remains for Stage 6 per plan.
+
+---
+
+## Stage 6 — Stats & Insights (Near)
+
+Changes
+- Implemented `GET /api/v1/collisions/near?lat&lon&radius_km[&limit]`:
+  - Requires `lat` and `lon` floats; validates `radius_km` (default 1.0, max 10.0) and `limit` (default 100, cap 500).
+  - Applies bounding box pruning then Haversine distance; sorts nearest-first and returns minimal fields plus `distance_km`.
+  - Reuses `CollisionFilter` so date/weather/quadrant/station filters apply consistently.
+
+Verification
+- `python manage.py check` → OK.
+- Manual smoke suggested: `/api/v1/collisions/near?lat=51.05&lon=-114.06&radius_km=1.5` and confirm ordering within radius and result caps.
+
+Notes
+- Default radius 1.0 km; hard max 10.0 km; default limit 100 with hard cap 500.
+
+---
+
+## Next Steps (Updated)
+
+- Stage 7: Add tests (models, serializers, loaders, endpoints—including stats and near) using `pytest` + factories.
+- Stage 8: README quick start, OpenAPI export, seed DB on submission branch, report/video.

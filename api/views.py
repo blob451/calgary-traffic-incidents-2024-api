@@ -177,3 +177,96 @@ class StatsByWeather(APIView):
             )
         ]
         return Response({"results": out})
+
+
+# --- Stage 6: Near endpoint ---
+from math import radians, sin, cos, asin, sqrt
+
+
+def _bbox(lat: float, lon: float, radius_km: float):
+    # Approximate degree deltas
+    lat_delta = radius_km / 111.32
+    # Avoid division by zero at poles; cos in radians
+    lon_delta = radius_km / max(1e-6, (111.32 * abs(cos(radians(lat)))))
+    return (lat - lat_delta, lat + lat_delta, lon - lon_delta, lon + lon_delta)
+
+
+def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    return 6371 * c
+
+
+class CollisionsNear(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request: HttpRequest):
+        # Parse inputs
+        try:
+            lat = float(request.GET.get("lat"))
+            lon = float(request.GET.get("lon"))
+        except (TypeError, ValueError):
+            return Response({"detail": "lat and lon are required float query parameters"}, status=400)
+
+        try:
+            radius = float(request.GET.get("radius_km", 1.0))
+        except ValueError:
+            radius = 1.0
+        if radius <= 0:
+            radius = 1.0
+        radius = min(radius, 10.0)
+
+        try:
+            limit = int(request.GET.get("limit", 100))
+        except ValueError:
+            limit = 100
+        limit = max(1, min(limit, 500))
+
+        lat_min, lat_max, lon_min, lon_max = _bbox(lat, lon, radius)
+
+        base = _filtered_collisions(request)
+        # Apply coarse bounding box first
+        qs = base.filter(latitude__gte=lat_min, latitude__lte=lat_max, longitude__gte=lon_min, longitude__lte=lon_max)
+
+        # Select only needed fields for distance computation
+        rows = list(
+            qs.values(
+                "collision_id",
+                "occurred_at",
+                "quadrant",
+                "longitude",
+                "latitude",
+                "count",
+                "location_text",
+            )
+        )
+
+        # Compute precise distance and filter to radius
+        out = []
+        for r in rows:
+            rlon = float(r["longitude"])
+            rlat = float(r["latitude"])
+            d = _haversine_km(lon, lat, rlon, rlat)
+            if d <= radius:
+                out.append({
+                    "collision_id": r["collision_id"],
+                    "occurred_at": r["occurred_at"],
+                    "quadrant": r["quadrant"],
+                    "longitude": rlon,
+                    "latitude": rlat,
+                    "count": int(r["count"] or 1),
+                    "location_text": r["location_text"],
+                    "distance_km": round(d, 3),
+                })
+
+        out.sort(key=lambda x: x["distance_km"])  # nearest first
+        out = out[:limit]
+
+        return Response({
+            "params": {"lat": lat, "lon": lon, "radius_km": radius, "limit": limit},
+            "results": out,
+            "count": len(out),
+        })

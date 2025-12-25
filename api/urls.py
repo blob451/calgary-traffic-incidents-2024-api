@@ -16,4 +16,5 @@ urlpatterns = [
     path('api/v1/stats/quadrant-share', views.StatsQuadrantShare.as_view(), name='stats-quadrant-share'),
     path('api/v1/stats/top-intersections', views.StatsTopIntersections.as_view(), name='stats-top-intersections'),
     path('api/v1/stats/by-weather', views.StatsByWeather.as_view(), name='stats-by-weather'),
+    path('api/v1/collisions/near', views.CollisionsNear.as_view(), name='collisions-near'),
 ]
