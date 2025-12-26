@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
 import django_filters as filters
 from django.db.models import Exists, OuterRef
 
-from core.models import Collision, CityDailyWeather, WeatherObservation, WeatherDay, Quadrant
+from core.models import Collision, CityDailyWeather, WeatherObservation, WeatherDay, Quadrant; from django.db import models
 
 
 def _str_to_bool(val: Optional[str]) -> Optional[bool]:
@@ -93,6 +93,9 @@ class CollisionFilter(filters.FilterSet):
             return qs
         if s.isdigit():
             return qs.filter(nearest_station_id=int(s))
-        # try match on climate_id or name
-        return qs.filter(nearest_station__climate_id=s)
+        # try match on climate_id (iexact) or station name (icontains)
+        return qs.filter(
+            models.Q(nearest_station__climate_id__iexact=s)
+            | models.Q(nearest_station__name__icontains=s)
+        )
 

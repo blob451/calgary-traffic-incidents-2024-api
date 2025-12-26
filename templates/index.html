@@ -18,6 +18,16 @@
     </header>
 
     <section>
+      <h2>Status</h2>
+      <ul>
+        <li>Collisions: <strong>{{ counts.collisions }}</strong></li>
+        <li>Weather stations: <strong>{{ counts.stations }}</strong></li>
+        <li>Station observations: <strong>{{ counts.observations }}</strong></li>
+        <li>City daily weather days: <strong>{{ counts.city_days }}</strong></li>
+      </ul>
+    </section>
+
+    <section>
       <h2>Docs</h2>
       <ul>
         <li><a href="/docs/">Swagger UI</a></li>
@@ -28,10 +38,15 @@
 
     <section>
       <h2>Example Endpoints</h2>
+      <p style="color:#555">Tip: date filters accept <code>from</code> and <code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
       <ul>
         <li><a href="/api/v1/collisions">List collisions</a></li>
         <li><a href="/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE">Filter by date + quadrant</a></li>
         <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
+        {% if sample_collision_id %}
+        <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
+        {% endif %}
+        <li><a href="/api/v1/flags">Flags (list)</a> — use Swagger UI to POST/PUT/DELETE</li>
         <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
         <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
         <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
@@ -42,6 +57,9 @@
       </ul>
     </section>
 
-    <footer style="margin-top:2rem; color:#666">Stages 1–8 ready for review.</footer>
+    <section>
+      <h2>Admin</h2>
+      <p><a href="/admin/">Django Admin</a> (credentials included in the report).</p>
+    </section>
   </body>
   </html>

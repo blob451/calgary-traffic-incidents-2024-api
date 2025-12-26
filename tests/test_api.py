@@ -33,7 +33,20 @@ def test_collisions_list_detail_and_flag():
         format="json",
     )
     assert resp.status_code in (200, 201)
+    flag_id = resp.json().get("id") if resp.headers.get("content-type","application/json").startswith("application/json") else None
     assert Flag.objects.filter(collision=c1).exists()
+
+    # Retrieve flag
+    if flag_id:
+        r = client.get(f"/api/v1/flags/{flag_id}/")
+        assert r.status_code == 200
+
+        # Update note (PATCH)
+        r = client.patch(f"/api/v1/flags/{flag_id}/", {"note": "updated note"}, format="json")
+        assert r.status_code in (200, 202)
+        # Delete
+        r = client.delete(f"/api/v1/flags/{flag_id}/")
+        assert r.status_code in (200, 202, 204)
 
 
 @pytest.mark.django_db
@@ -65,4 +78,3 @@ def test_filters_and_stats_endpoints():
         resp = client.get(path)
         assert resp.status_code == 200, path
         assert "results" in resp.json(), path
-

@@ -1,14 +1,23 @@
 from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, QueryDict
 from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, status
 from rest_framework.permissions import AllowAny
+from django.urls import reverse
 
-from core.models import Collision, CityDailyWeather, Quadrant, WeatherDay
+from core.models import (
+    Collision,
+    CityDailyWeather,
+    Quadrant,
+    WeatherDay,
+    WeatherStation,
+    WeatherObservation,
+)
 from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter
 from .serializers import (
     CollisionListSerializer,
     CollisionDetailSerializer,
@@ -17,7 +26,29 @@ from .serializers import (
 from .filters import CollisionFilter
 
 def index(request: HttpRequest) -> HttpResponse:
-    return render(request, 'index.html')
+    # Basic counts to signal DB seeding status
+    collisions_count = Collision.objects.count()
+    stations_count = WeatherStation.objects.count()
+    observations_count = WeatherObservation.objects.count()
+    city_days_count = CityDailyWeather.objects.count()
+
+    # Provide a sample collision_id for a quick detail link
+    sample_collision_id = (
+        Collision.objects.order_by('-occurred_at')
+        .values_list('collision_id', flat=True)
+        .first()
+    )
+
+    ctx = {
+        'counts': {
+            'collisions': collisions_count,
+            'stations': stations_count,
+            'observations': observations_count,
+            'city_days': city_days_count,
+        },
+        'sample_collision_id': sample_collision_id,
+    }
+    return render(request, 'index.html', ctx)
 
 
 class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -37,7 +68,14 @@ class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
         return CollisionListSerializer
 
 
-class FlagViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class FlagViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = FlagSerializer
     permission_classes = [AllowAny]
 
@@ -46,17 +84,56 @@ class FlagViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gener
 
         return Flag.objects.select_related("collision").order_by("-created_at")
 
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        try:
+            flag_id = response.data.get('id')
+            if flag_id is not None:
+                loc = request.build_absolute_uri(reverse('flags-detail', args=[flag_id]))
+                response['Location'] = loc
+        except Exception:
+            pass
+        # Ensure 201 Created
+        response.status_code = status.HTTP_201_CREATED
+        return response
+
+
+def _normalized_params(request: HttpRequest) -> QueryDict:
+    """Map common alias params (e.g., from/to) to filter params."""
+    q = request.GET.copy()
+    if "from" in q and "from_date" not in q:
+        q["from_date"] = q.get("from")
+    if "to" in q and "to_date" not in q:
+        q["to_date"] = q.get("to")
+    return q
+
 
 def _filtered_collisions(request: HttpRequest):
     qs = Collision.objects.all()
-    f = CollisionFilter(request.GET, queryset=qs)
+    f = CollisionFilter(_normalized_params(request), queryset=qs)
     return f.qs
 
 
 class StatsMonthlyTrend(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='NE|NW|SE|SW|UNK'),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, description='dry|wet|snowy'),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         # Sum counts by existing month field
@@ -70,7 +147,22 @@ class StatsMonthlyTrend(APIView):
 class StatsByHour(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='commute', type=OpenApiTypes.STR, required=False, description='am|pm'),
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         commute = (request.GET.get("commute") or "").lower().strip()
         qs = _filtered_collisions(request)
@@ -91,7 +183,21 @@ class StatsByHour(APIView):
 class StatsWeekday(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         data = qs.values("weekday").annotate(total=Sum("count")).order_by("weekday")
@@ -103,7 +209,21 @@ class StatsWeekday(APIView):
 class StatsQuadrantShare(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         data = qs.values("quadrant").annotate(total=Sum("count")).order_by("quadrant")
@@ -117,7 +237,22 @@ class StatsQuadrantShare(APIView):
 class StatsTopIntersections(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='limit', type=OpenApiTypes.INT, required=False),
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         try:
             limit = int(request.GET.get("limit", 10))
@@ -146,7 +281,21 @@ class StatsTopIntersections(APIView):
 class StatsByWeather(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         qs = _filtered_collisions(request)
         # Join via date to CityDailyWeather for city-level weather day
@@ -205,7 +354,25 @@ def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
 class CollisionsNear(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[
+            OpenApiParameter(name='lat', type=OpenApiTypes.NUMBER, required=True),
+            OpenApiParameter(name='lon', type=OpenApiTypes.NUMBER, required=True),
+            OpenApiParameter(name='radius_km', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='limit', type=OpenApiTypes.INT, required=False),
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+    )
     def get(self, request: HttpRequest):
         # Parse inputs
         try:

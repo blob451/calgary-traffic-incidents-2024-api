@@ -36,6 +36,7 @@ python manage.py runserver 127.0.0.1:8000
 - Filtered list: `/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE`
 - Detail by ID: `/api/v1/collisions/{collision_id}`
 - Create flag: POST `/api/v1/flags` with JSON `{ "collision": "{collision_id}", "note": "text" }`
+  - Flags support retrieve/update/delete at `/api/v1/flags/{id}` (use Swagger UI to try PUT/PATCH/DELETE).
 - Stats:
   - Monthly: `/api/v1/stats/monthly-trend`
   - By hour: `/api/v1/stats/by-hour?commute=am`

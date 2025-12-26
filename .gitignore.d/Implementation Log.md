@@ -87,13 +87,13 @@ Changes
 - Serializers:
   - `CollisionListSerializer` (summary + nested nearest station).
   - `CollisionDetailSerializer` (adds `description`, `intersection_key`, `station_weather`, `city_weather`).
-  - `FlagSerializer` (POST by `collision_id` slug).
+  - `FlagSerializer` (POST by `collision_id` slug); added update/delete support (Serializer.update + ViewSet mixins).
 - Filters:
   - `CollisionFilter`: supports `from_date` (>=), `to_date` (<=), `quadrant`, `weather_day_city` (Dry/Wet/Snowy), `freeze_day_city` (bool), `heavy_rain` (bool), `heavy_snow` (bool), `gust_min` (km/h), `station` (id or climate_id).
   - Search on `description`/`location_text`; ordering on `occurred_at`, `date`, `quadrant`, `count`.
 - Views:
-  - `CollisionViewSet` (read-only list/retrieve) now uses `collision_id` as lookup field.
-  - `FlagViewSet` (create/list).
+- `CollisionViewSet` (read-only list/retrieve) now uses `collision_id` as lookup field.
+- `FlagViewSet` now supports create/list/retrieve/update/delete to demonstrate full CRUD.
 - URLs:
   - DRF router → `/api/v1/collisions`, `/api/v1/flags`.
 
@@ -104,6 +104,9 @@ Findings/Notes
 Verification
 - `python manage.py check` → OK.
 - Manual smoke tests recommended via dev server (list, detail, create flag) — to be included in Stage 7 tests.
+
+Additional Refinements
+- Accept alias query params `from` and `to`, mapped internally to `from_date`/`to_date` across list/stats/near endpoints.
 
 ---
 

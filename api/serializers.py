@@ -119,3 +119,19 @@ class FlagSerializer(serializers.Serializer):
 
         return Flag.objects.create(**validated_data)
 
+    def validate_note(self, value: str) -> str:
+        if value is None or not str(value).strip():
+            raise serializers.ValidationError("Note must not be empty.")
+        s = str(value).strip()
+        if len(s) > 1000:
+            raise serializers.ValidationError("Note is too long (max 1000 chars).")
+        return s
+
+    def update(self, instance, validated_data):
+        # Allow updating note and collision
+        if "note" in validated_data:
+            instance.note = self.validate_note(validated_data["note"])
+        if "collision" in validated_data:
+            instance.collision = validated_data["collision"]
+        instance.save()
+        return instance
