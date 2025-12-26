@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: calgary-traffic-incidents-2024-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn calgary_collisions.wsgi:application --bind=0.0.0.0:$PORT"
+    healthCheckPath: /
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: calgary_collisions.settings
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com,127.0.0.1,localhost
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.13.0"
