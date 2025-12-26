@@ -252,6 +252,67 @@ paths:
   /api/v1/collisions/near:
     get:
       operationId: api_v1_collisions_near_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: lat
+        schema:
+          type: number
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+      - in: query
+        name: lon
+        schema:
+          type: number
+        required: true
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: radius_km
+        schema:
+          type: number
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -328,9 +389,165 @@ paths:
               schema:
                 $ref: '#/components/schemas/Flag'
           description: ''
+  /api/v1/flags/{id}/:
+    get:
+      operationId: api_v1_flags_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this flag.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flag'
+          description: ''
+    put:
+      operationId: api_v1_flags_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this flag.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Flag'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Flag'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Flag'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flag'
+          description: ''
+    patch:
+      operationId: api_v1_flags_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this flag.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFlag'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFlag'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFlag'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flag'
+          description: ''
+    delete:
+      operationId: api_v1_flags_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this flag.
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
   /api/v1/stats/by-hour:
     get:
       operationId: api_v1_stats_by_hour_retrieve
+      parameters:
+      - in: query
+        name: commute
+        schema:
+          type: string
+        description: am|pm
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -348,6 +565,49 @@ paths:
   /api/v1/stats/by-weather:
     get:
       operationId: api_v1_stats_by_weather_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -365,6 +625,61 @@ paths:
   /api/v1/stats/monthly-trend:
     get:
       operationId: api_v1_stats_monthly_trend_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: from_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+        description: NE|NW|SE|SW|UNK
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: to_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
+        description: dry|wet|snowy
       tags:
       - api
       security:
@@ -382,6 +697,49 @@ paths:
   /api/v1/stats/quadrant-share:
     get:
       operationId: api_v1_stats_quadrant_share_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -399,6 +757,53 @@ paths:
   /api/v1/stats/top-intersections:
     get:
       operationId: api_v1_stats_top_intersections_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: limit
+        schema:
+          type: integer
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -416,6 +821,49 @@ paths:
   /api/v1/stats/weekday:
     get:
       operationId: api_v1_stats_weekday_retrieve
+      parameters:
+      - in: query
+        name: freeze_day_city
+        schema:
+          type: boolean
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: gust_min
+        schema:
+          type: number
+      - in: query
+        name: heavy_rain
+        schema:
+          type: boolean
+      - in: query
+        name: heavy_snow
+        schema:
+          type: boolean
+      - in: query
+        name: quadrant
+        schema:
+          type: string
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: station
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: weather_day_city
+        schema:
+          type: string
       tags:
       - api
       security:
@@ -628,6 +1076,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Flag'
+    PatchedFlag:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        collision:
+          type: string
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
     QuadrantEnum:
       enum:
       - NW

@@ -124,7 +124,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# Avoid warnings if the directory is not tracked in Git (empty dirs not committed)
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
