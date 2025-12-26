@@ -27,7 +27,11 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-insecure-key-change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1','true','t','yes')
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = [h.strip() for h in _hosts_env if h.strip()]
+# Allow any Render subdomain by default for hosted deployments
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
 
 
 # Application definition
