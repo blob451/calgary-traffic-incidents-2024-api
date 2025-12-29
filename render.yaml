@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn calgary_collisions.wsgi:application --bind=0.0.0.0:$PORT"
+    startCommand: bash -c "python manage.py migrate && python manage.py seed --dir Data --skip-migrate && python manage.py collectstatic --noinput && gunicorn calgary_collisions.wsgi:application --bind=0.0.0.0:$PORT"
     healthCheckPath: /
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -17,3 +17,9 @@ services:
         value: "False"
       - key: PYTHON_VERSION
         value: "3.13.0"
+      - key: ASSESSMENT_MODE
+        value: "True"
+      - key: ADMIN_USERNAME
+        value: grader
+      - key: ADMIN_PASSWORD
+        value: secret

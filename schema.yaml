@@ -880,6 +880,41 @@ paths:
           description: ''
 components:
   schemas:
+    CityWeather:
+      type: object
+      properties:
+        weather_day_city:
+          type: string
+          nullable: true
+        freeze_day_city:
+          type: boolean
+          nullable: true
+        t_max_avg:
+          type: number
+          format: double
+          nullable: true
+        t_min_avg:
+          type: number
+          format: double
+          nullable: true
+        precip_any:
+          type: boolean
+          nullable: true
+        snow_any:
+          type: boolean
+          nullable: true
+        agreement_ratio:
+          type: number
+          format: double
+          nullable: true
+      required:
+      - agreement_ratio
+      - freeze_day_city
+      - precip_any
+      - snow_any
+      - t_max_avg
+      - t_min_avg
+      - weather_day_city
     CollisionDetail:
       type: object
       properties:
@@ -936,14 +971,12 @@ components:
           type: string
           maxLength: 64
         station_weather:
-          type: object
-          additionalProperties: {}
-          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/StationObs'
           readOnly: true
         city_weather:
-          type: object
-          additionalProperties: {}
-          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/CityWeather'
           readOnly: true
       required:
       - city_weather
@@ -1104,6 +1137,39 @@ components:
         * `SW` - SW
         * `SE` - SE
         * `UNK` - Unknown
+    StationObs:
+      type: object
+      properties:
+        t_max_c:
+          type: number
+          format: double
+          nullable: true
+        t_min_c:
+          type: number
+          format: double
+          nullable: true
+        t_mean_c:
+          type: number
+          format: double
+          nullable: true
+        total_precip_mm:
+          type: number
+          format: double
+          nullable: true
+        total_snow_cm:
+          type: number
+          format: double
+          nullable: true
+        gust_kmh:
+          type: integer
+          nullable: true
+      required:
+      - gust_kmh
+      - t_max_c
+      - t_mean_c
+      - t_min_c
+      - total_precip_mm
+      - total_snow_cm
     WeatherStation:
       type: object
       properties:

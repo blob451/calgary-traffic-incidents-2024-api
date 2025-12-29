@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from core.models import (
     Collision,
@@ -70,6 +71,7 @@ class CollisionDetailSerializer(CollisionListSerializer):
             "city_weather",
         ]
 
+    @extend_schema_field(StationObsSerializer)
     def get_station_weather(self, obj: Collision) -> Optional[dict]:
         if not obj.nearest_station:
             return None
@@ -89,6 +91,7 @@ class CollisionDetailSerializer(CollisionListSerializer):
         )
         return obs or None
 
+    @extend_schema_field(CityWeatherSerializer)
     def get_city_weather(self, obj: Collision) -> Optional[dict]:
         cw = (
             CityDailyWeather.objects.filter(date=obj.date)
