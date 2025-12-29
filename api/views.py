@@ -35,12 +35,18 @@ def _gather_run_info():
     try:
         import django
         import rest_framework
+<<<<<<< HEAD
         import platform
+=======
+>>>>>>> origin/submission
         return {
             'python': sys.version.split(" ")[0],
             'django': django.get_version(),
             'drf': getattr(rest_framework, '__version__', 'unknown'),
+<<<<<<< HEAD
             'os': f"{platform.system()} {platform.release()}",
+=======
+>>>>>>> origin/submission
         }
     except Exception:
         return None

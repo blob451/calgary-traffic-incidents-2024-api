@@ -44,7 +44,10 @@
     <section>
       <h2>Run Info</h2>
       <ul>
+<<<<<<< HEAD
         <li>OS: <strong>{{ runinfo.os }}</strong></li>
+=======
+>>>>>>> origin/submission
         <li>Python: <strong>{{ runinfo.python }}</strong></li>
         <li>Django: <strong>{{ runinfo.django }}</strong></li>
         <li>DRF: <strong>{{ runinfo.drf }}</strong></li>
@@ -92,7 +95,11 @@ python manage.py runserver 127.0.0.1:8000</pre>
         {% if sample_collision_id %}
         <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
         {% endif %}
+<<<<<<< HEAD
         <li><a href="/api/v1/flags">Flags (list)</a> — use Swagger UI to POST/PUT/DELETE | <a href="/assessment/create-sample-flag">Create sample flag</a></li>
+=======
+        <li><a href="/api/v1/flags">Flags (list)</a> — use Swagger UI to POST/PUT/DELETE {% if assessment %} | <a href="/assessment/create-sample-flag">Create sample flag</a>{% endif %}</li>
+>>>>>>> origin/submission
         {% if flag_detail_id %}<li><a href="/api/v1/flags/{{ flag_detail_id }}/">Sample flag detail</a></li>{% endif %}
         <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
         <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
