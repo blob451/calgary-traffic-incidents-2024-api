@@ -24,3 +24,26 @@ def test_near_endpoint_within_radius_sorted():
     dists = [r["distance_km"] for r in results]
     assert dists == sorted(dists)
 
+
+@pytest.mark.django_db
+def test_near_datetime_format_matches_list():
+    # Create a collision at a known location
+    c = CollisionFactory(latitude=51.05, longitude=-114.06)
+    client = APIClient()
+
+    # Get list representation (uses DRF serializer formatting)
+    r_list = client.get("/api/v1/collisions/")
+    assert r_list.status_code == 200
+    list_item = next((i for i in r_list.json()["results"] if i["collision_id"] == c.collision_id), None)
+    assert list_item is not None
+    occurred_list = list_item["occurred_at"]
+
+    # Get near representation
+    r_near = client.get(f"/api/v1/collisions/near?lat={c.latitude}&lon={c.longitude}&radius_km=0.5&limit=1")
+    assert r_near.status_code == 200
+    results = r_near.json()["results"]
+    assert len(results) >= 1
+    occurred_near = results[0]["occurred_at"]
+
+    # Formats should be identical strings (normalized by serializer)
+    assert occurred_near == occurred_list

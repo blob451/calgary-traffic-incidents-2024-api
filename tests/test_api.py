@@ -78,3 +78,13 @@ def test_filters_and_stats_endpoints():
         resp = client.get(path)
         assert resp.status_code == 200, path
         assert "results" in resp.json(), path
+
+
+@pytest.mark.django_db
+def test_invalid_gust_min_param_returns_400():
+    # seed one record to ensure list endpoint is active
+    CollisionFactory()
+    client = APIClient()
+    # Non-numeric gust_min should produce a 400 validation error from django-filter
+    r = client.get('/api/v1/collisions/?gust_min=not-a-number')
+    assert r.status_code == 400
