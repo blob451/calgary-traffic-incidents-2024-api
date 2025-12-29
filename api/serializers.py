@@ -135,3 +135,14 @@ class FlagSerializer(serializers.Serializer):
             instance.collision = validated_data["collision"]
         instance.save()
         return instance
+
+
+class CollisionNearSerializer(serializers.Serializer):
+    collision_id = serializers.CharField()
+    occurred_at = serializers.DateTimeField()
+    quadrant = serializers.CharField()
+    longitude = serializers.FloatField()
+    latitude = serializers.FloatField()
+    count = serializers.IntegerField()
+    location_text = serializers.CharField(allow_blank=True)
+    distance_km = serializers.FloatField()

@@ -10,6 +10,7 @@ from rest_framework import viewsets, mixins, status
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
 from django.urls import reverse
+from django.db import connection
 
 from core.models import (
     Collision,
@@ -25,6 +26,7 @@ from .serializers import (
     CollisionListSerializer,
     CollisionDetailSerializer,
     FlagSerializer,
+    CollisionNearSerializer,
 )
 from .filters import CollisionFilter
 
@@ -40,6 +42,26 @@ def _gather_run_info():
         }
     except Exception:
         return None
+
+def _parse_requirements(requirements_path: str, max_items: int = 12):
+    pkgs = []
+    try:
+        with open(requirements_path, 'r', encoding='utf-8') as fh:
+            for line in fh:
+                s = line.strip()
+                if not s or s.startswith('#'):
+                    continue
+                if '==' in s:
+                    name, ver = s.split('==', 1)
+                    pkgs.append({'name': name.strip(), 'version': ver.strip()})
+                else:
+                    pkgs.append({'name': s, 'version': ''})
+                if len(pkgs) >= max_items:
+                    break
+    except Exception:
+        return None
+    return pkgs
+
 
 def index(request: HttpRequest) -> HttpResponse:
     # Basic counts to signal DB seeding status
@@ -57,18 +79,49 @@ def index(request: HttpRequest) -> HttpResponse:
 
     assessment = os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
 
+    # DB info for hosted verification
+    try:
+        db_vendor = getattr(connection, 'vendor', None)
+        db_name = connection.settings_dict.get('NAME')
+        db_info = {'vendor': db_vendor, 'name': str(db_name)}
+    except Exception:
+        db_info = None
+
+    # Parse requirements for quick package pins summary
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    # try repo root then project root
+    req_candidates = [
+        os.path.join(base_dir, 'requirements.txt'),
+        os.path.abspath(os.path.join(base_dir, '..', 'requirements.txt')),
+    ]
+    req_path = next((p for p in req_candidates if os.path.exists(p)), None)
+    packages = _parse_requirements(req_path) if req_path else None
+
+    total_entries = collisions_count + stations_count + observations_count + city_days_count
+
+    # Optional flag detail link if any
+    try:
+        from core.models import Flag
+        flag_id = Flag.objects.order_by('id').values_list('id', flat=True).first()
+    except Exception:
+        flag_id = None
+
     ctx = {
         'counts': {
             'collisions': collisions_count,
             'stations': stations_count,
             'observations': observations_count,
             'city_days': city_days_count,
+            'total': total_entries,
         },
         'sample_collision_id': sample_collision_id,
         'assessment': assessment,
         'runinfo': _gather_run_info() if assessment else None,
         'admin_user': os.environ.get('ADMIN_USERNAME') if assessment else None,
         'admin_pass': os.environ.get('ADMIN_PASSWORD') if assessment else None,
+        'db': db_info,
+        'packages': packages,
+        'flag_detail_id': flag_id,
     }
     return render(request, 'index.html', ctx)
 
@@ -493,9 +546,12 @@ class CollisionsNear(APIView):
         out.sort(key=lambda x: x["distance_km"])  # nearest first
         out = out[:limit]
 
+        # Use serializer to normalize datetime format consistently with DRF config
+        ser = CollisionNearSerializer(out, many=True)
+
         return Response({
             "params": {"lat": lat, "lon": lon, "radius_km": radius, "limit": limit},
-            "results": out,
+            "results": ser.data,
             "count": len(out),
         })
 
