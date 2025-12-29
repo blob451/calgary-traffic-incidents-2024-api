@@ -9,6 +9,8 @@ router.register(r'api/v1/flags', views.FlagViewSet, basename='flags')
 urlpatterns = [
     path('', views.index, name='index'),
     path('', include(router.urls)),
+    # Assessment helper to create a sample flag
+    path('assessment/create-sample-flag', views.assessment_create_sample_flag, name='assessment-create-flag'),
     # Stats endpoints
     path('api/v1/stats/monthly-trend', views.StatsMonthlyTrend.as_view(), name='stats-monthly-trend'),
     path('api/v1/stats/by-hour', views.StatsByHour.as_view(), name='stats-by-hour'),
