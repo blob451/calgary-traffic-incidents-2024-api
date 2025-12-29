@@ -1,4 +1,6 @@
-from django.shortcuts import render
+import os
+import sys
+from django.shortcuts import render, redirect
 from django.http import HttpRequest, HttpResponse, QueryDict
 from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth
@@ -6,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import viewsets, mixins, status
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 from django.urls import reverse
 
 from core.models import (
@@ -25,6 +28,19 @@ from .serializers import (
 )
 from .filters import CollisionFilter
 
+
+def _gather_run_info():
+    try:
+        import django
+        import rest_framework
+        return {
+            'python': sys.version.split(" ")[0],
+            'django': django.get_version(),
+            'drf': getattr(rest_framework, '__version__', 'unknown'),
+        }
+    except Exception:
+        return None
+
 def index(request: HttpRequest) -> HttpResponse:
     # Basic counts to signal DB seeding status
     collisions_count = Collision.objects.count()
@@ -39,6 +55,8 @@ def index(request: HttpRequest) -> HttpResponse:
         .first()
     )
 
+    assessment = os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
+
     ctx = {
         'counts': {
             'collisions': collisions_count,
@@ -47,6 +65,10 @@ def index(request: HttpRequest) -> HttpResponse:
             'city_days': city_days_count,
         },
         'sample_collision_id': sample_collision_id,
+        'assessment': assessment,
+        'runinfo': _gather_run_info() if assessment else None,
+        'admin_user': os.environ.get('ADMIN_USERNAME') if assessment else None,
+        'admin_pass': os.environ.get('ADMIN_PASSWORD') if assessment else None,
     }
     return render(request, 'index.html', ctx)
 
@@ -66,6 +88,10 @@ class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return CollisionDetailSerializer
         return CollisionListSerializer
+
+    def list(self, request, *args, **kwargs):
+        _validate_date_range_or_400(request)
+        return super().list(request, *args, **kwargs)
 
 
 class FlagViewSet(
@@ -114,6 +140,30 @@ def _filtered_collisions(request: HttpRequest):
     return f.qs
 
 
+def _parse_date(s: str):
+    from datetime import date
+    y, m, d = [int(x) for x in s.split('-')]
+    return date(y, m, d)
+
+
+def _validate_date_range_or_400(request: HttpRequest):
+    q = _normalized_params(request)
+    fs = q.get('from_date')
+    ts = q.get('to_date')
+    if fs:
+        try:
+            _parse_date(fs)
+        except Exception:
+            raise ValidationError({'from': 'Invalid date format, expected YYYY-MM-DD'})
+    if ts:
+        try:
+            _parse_date(ts)
+        except Exception:
+            raise ValidationError({'to': 'Invalid date format, expected YYYY-MM-DD'})
+    if fs and ts and _parse_date(fs) > _parse_date(ts):
+        raise ValidationError({'from_to': 'from must be <= to'})
+
+
 class StatsMonthlyTrend(APIView):
     permission_classes = [AllowAny]
 
@@ -135,6 +185,7 @@ class StatsMonthlyTrend(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         qs = _filtered_collisions(request)
         # Sum counts by existing month field
         data = qs.values("month").annotate(total=Sum("count")).order_by("month")
@@ -164,6 +215,7 @@ class StatsByHour(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         commute = (request.GET.get("commute") or "").lower().strip()
         qs = _filtered_collisions(request)
         if commute == "am":
@@ -199,6 +251,7 @@ class StatsWeekday(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         qs = _filtered_collisions(request)
         data = qs.values("weekday").annotate(total=Sum("count")).order_by("weekday")
         by_weekday = {row["weekday"]: row["total"] for row in data}
@@ -225,6 +278,7 @@ class StatsQuadrantShare(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         qs = _filtered_collisions(request)
         data = qs.values("quadrant").annotate(total=Sum("count")).order_by("quadrant")
         # Ensure all quadrants present
@@ -254,6 +308,7 @@ class StatsTopIntersections(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         try:
             limit = int(request.GET.get("limit", 10))
         except Exception:
@@ -297,6 +352,7 @@ class StatsByWeather(APIView):
         ],
     )
     def get(self, request: HttpRequest):
+        _validate_date_range_or_400(request)
         qs = _filtered_collisions(request)
         # Join via date to CityDailyWeather for city-level weather day
         dates = list(qs.values_list("date", flat=True).distinct())
@@ -380,6 +436,8 @@ class CollisionsNear(APIView):
             lon = float(request.GET.get("lon"))
         except (TypeError, ValueError):
             return Response({"detail": "lat and lon are required float query parameters"}, status=400)
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            raise ValidationError({'lat_lon': 'lat must be [-90,90] and lon [-180,180]'})
 
         try:
             radius = float(request.GET.get("radius_km", 1.0))
@@ -440,3 +498,17 @@ class CollisionsNear(APIView):
             "results": out,
             "count": len(out),
         })
+
+
+def assessment_create_sample_flag(request: HttpRequest):
+    assessment = os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
+    if not assessment:
+        return redirect('/')
+    from core.models import Flag
+    if not Flag.objects.exists():
+        cid = Collision.objects.values_list('collision_id', flat=True).first()
+        if cid:
+            ser = FlagSerializer(data={'collision': cid, 'note': 'sample flag (assessment)'})
+            if ser.is_valid():
+                ser.save()
+    return redirect('/api/v1/flags')

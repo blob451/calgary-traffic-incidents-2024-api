@@ -36,6 +36,25 @@
       </ul>
     </section>
 
+    {% if assessment %}
+    <section>
+      <h2>Run Info</h2>
+      <ul>
+        <li>Python: <strong>{{ runinfo.python }}</strong></li>
+        <li>Django: <strong>{{ runinfo.django }}</strong></li>
+        <li>DRF: <strong>{{ runinfo.drf }}</strong></li>
+        <li>OpenAPI JSON: <a href="/api/schema/">/api/schema/</a></li>
+        {% if admin_user %}<li>Admin username: <strong>{{ admin_user }}</strong></li>{% endif %}
+        {% if admin_pass %}<li>Admin password: <strong>{{ admin_pass }}</strong></li>{% endif %}
+      </ul>
+      <details>
+        <summary>Commands (seed/tests)</summary>
+        <pre>python manage.py seed
+pytest -q</pre>
+      </details>
+    </section>
+    {% endif %}
+
     <section>
       <h2>Example Endpoints</h2>
       <p style="color:#555">Tip: date filters accept <code>from</code> and <code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
@@ -46,7 +65,7 @@
         {% if sample_collision_id %}
         <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
         {% endif %}
-        <li><a href="/api/v1/flags">Flags (list)</a> — use Swagger UI to POST/PUT/DELETE</li>
+        <li><a href="/api/v1/flags">Flags (list)</a> — use Swagger UI to POST/PUT/DELETE {% if assessment %} | <a href="/assessment/create-sample-flag">Create sample flag</a>{% endif %}</li>
         <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
         <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
         <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
