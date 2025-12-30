@@ -149,3 +149,10 @@ class CollisionNearSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     location_text = serializers.CharField(allow_blank=True)
     distance_km = serializers.FloatField()
+
+
+class ErrorSerializer(serializers.Serializer):
+    detail = serializers.CharField(required=False)
+    # Optional field-wise errors when validation returns a dict of lists
+    # Using generic mapping for docs clarity without over-constraining shape
+    # e.g., {"from": ["Invalid date format"], "to": ["..."]}

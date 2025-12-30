@@ -71,7 +71,10 @@ class CityDailyWeather(models.Model):
     agreement_ratio = models.FloatField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["date"])]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["weather_day_city"]),
+        ]
 
     def __str__(self) -> str:
         return f"CityWeather {self.date}"
@@ -108,6 +111,11 @@ class Collision(models.Model):
             models.Index(fields=["date", "quadrant"]),
             models.Index(fields=["occurred_at"]),
             models.Index(fields=["nearest_station"]),
+        ]
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(hour__gte=0, hour__lte=23) | models.Q(hour__isnull=True)), name="collision_hour_range"),
+            models.CheckConstraint(condition=(models.Q(weekday__gte=0, weekday__lte=6) | models.Q(weekday__isnull=True)), name="collision_weekday_range"),
+            models.CheckConstraint(condition=(models.Q(month__gte=1, month__lte=12) | models.Q(month__isnull=True)), name="collision_month_range"),
         ]
 
     def __str__(self) -> str:

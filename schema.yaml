@@ -160,6 +160,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+      - in: query
         name: from_date
         schema:
           type: string
@@ -190,9 +195,15 @@ paths:
         schema:
           type: integer
       - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Override page size (max 200)
+      - in: query
         name: quadrant
         schema:
           type: string
+        description: NE|NW|SE|SW|UNK
       - name: search
         required: false
         in: query
@@ -204,6 +215,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+      - in: query
         name: to_date
         schema:
           type: string
@@ -214,7 +230,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Collisions
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -225,6 +241,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedCollisionListList'
+              examples:
+                FilterByDate&Quadrant:
+                  value:
+                    count: 123
+                    next: http://api.example.org/accounts/?page=4
+                    previous: http://api.example.org/accounts/?page=2
+                    results:
+                    - from: '2024-01-01'
+                      to: '2024-12-31'
+                      quadrant: NE
+                  summary: Filter by date & quadrant
           description: ''
   /api/v1/collisions/{collision_id}/:
     get:
@@ -314,7 +341,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Collisions
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -326,6 +353,20 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+              examples:
+                NearCollisionsExample:
+                  value:
+                    lat: 51.045
+                    lon: -114.06
+                    radius_km: 1.5
+                    limit: 50
+                  summary: Near collisions example
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: ''
   /api/v1/flags/:
     get:
@@ -341,6 +382,12 @@ paths:
         required: false
         in: query
         description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
         schema:
           type: integer
       - name: search
@@ -549,7 +596,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -609,7 +656,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -681,7 +728,7 @@ paths:
           type: string
         description: dry|wet|snowy
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -741,7 +788,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -805,7 +852,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -865,7 +912,7 @@ paths:
         schema:
           type: string
       tags:
-      - api
+      - Stats
       security:
       - cookieAuth: []
       - basicAuth: []
@@ -1044,6 +1091,11 @@ components:
       - longitude
       - nearest_station
       - occurred_at
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
     Flag:
       type: object
       properties:

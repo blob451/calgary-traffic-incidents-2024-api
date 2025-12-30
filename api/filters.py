@@ -6,6 +6,7 @@ import django_filters as filters
 from django.db.models import Exists, OuterRef
 
 from core.models import Collision, CityDailyWeather, WeatherObservation, WeatherDay, Quadrant; from django.db import models
+from rest_framework.exceptions import ValidationError
 
 
 def _str_to_bool(val: Optional[str]) -> Optional[bool]:
@@ -22,7 +23,7 @@ def _str_to_bool(val: Optional[str]) -> Optional[bool]:
 class CollisionFilter(filters.FilterSet):
     from_date = filters.DateFilter(field_name="date", lookup_expr="gte", label="from", method="filter_from")
     to_date = filters.DateFilter(field_name="date", lookup_expr="lte", label="to", method="filter_to")
-    quadrant = filters.CharFilter(field_name="quadrant")
+    quadrant = filters.CharFilter(method="filter_quadrant")
     weather_day_city = filters.CharFilter(method="filter_weather_day_city")
     freeze_day_city = filters.CharFilter(method="filter_freeze_day_city")
     heavy_rain = filters.CharFilter(method="filter_heavy_rain")
@@ -39,6 +40,15 @@ class CollisionFilter(filters.FilterSet):
 
     def filter_to(self, qs, name, value):
         return qs.filter(date__lte=value)
+
+    def filter_quadrant(self, qs, name, value):
+        if not value:
+            return qs
+        s = str(value).strip().upper()
+        valid = {Quadrant.NE, Quadrant.NW, Quadrant.SE, Quadrant.SW, Quadrant.UNKNOWN}
+        if s not in valid:
+            raise ValidationError({'quadrant': f'Invalid quadrant. Expected one of {sorted(valid)}'})
+        return qs.filter(quadrant=s)
 
     def filter_weather_day_city(self, qs, name, value):
         if not value:

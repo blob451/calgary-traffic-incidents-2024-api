@@ -20,13 +20,16 @@ from core.models import (
     WeatherStation,
     WeatherObservation,
 )
-from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiTypes, OpenApiExample
 from drf_spectacular.utils import OpenApiParameter
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from .serializers import (
     CollisionListSerializer,
     CollisionDetailSerializer,
     FlagSerializer,
     CollisionNearSerializer,
+    ErrorSerializer,
 )
 from .filters import CollisionFilter
 
@@ -160,6 +163,18 @@ class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
             return CollisionDetailSerializer
         return CollisionListSerializer
 
+    @extend_schema(
+        tags=['Collisions'],
+        parameters=[
+            OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='NE|NW|SE|SW|UNK'),
+            OpenApiParameter(name='page_size', type=OpenApiTypes.INT, required=False, description='Override page size (max 200)'),
+        ],
+        examples=[
+            OpenApiExample('Filter by date & quadrant', value={'from': '2024-01-01', 'to': '2024-12-31', 'quadrant': 'NE'}),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         _validate_date_range_or_400(request)
         return super().list(request, *args, **kwargs)
@@ -235,10 +250,12 @@ def _validate_date_range_or_400(request: HttpRequest):
         raise ValidationError({'from_to': 'from must be <= to'})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsMonthlyTrend(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
@@ -266,10 +283,12 @@ class StatsMonthlyTrend(APIView):
         return Response({"results": out})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsByHour(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='commute', type=OpenApiTypes.STR, required=False, description='am|pm'),
@@ -303,10 +322,12 @@ class StatsByHour(APIView):
         return Response({"results": out, "commute": commute or None})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsWeekday(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
@@ -330,10 +351,12 @@ class StatsWeekday(APIView):
         return Response({"results": out})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsQuadrantShare(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
@@ -359,10 +382,12 @@ class StatsQuadrantShare(APIView):
         return Response({"results": out})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsTopIntersections(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='limit', type=OpenApiTypes.INT, required=False),
@@ -404,10 +429,12 @@ class StatsTopIntersections(APIView):
         return Response({"results": out, "limit": limit})
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class StatsByWeather(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=['Stats'],
         responses=OpenApiTypes.OBJECT,
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
@@ -478,11 +505,13 @@ def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     return 6371 * c
 
 
+@method_decorator(cache_page(60), name='dispatch')
 class CollisionsNear(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        responses=OpenApiTypes.OBJECT,
+        tags=['Collisions'],
+        responses={200: OpenApiTypes.OBJECT, 400: ErrorSerializer},
         parameters=[
             OpenApiParameter(name='lat', type=OpenApiTypes.NUMBER, required=True),
             OpenApiParameter(name='lon', type=OpenApiTypes.NUMBER, required=True),
@@ -498,6 +527,12 @@ class CollisionsNear(APIView):
             OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
             OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
             OpenApiParameter(name='search', type=OpenApiTypes.STR, required=False),
+        ],
+        examples=[
+            OpenApiExample(
+                'Near collisions example',
+                value={'lat': 51.045, 'lon': -114.06, 'radius_km': 1.5, 'limit': 50}
+            )
         ],
     )
     def get(self, request: HttpRequest):
