@@ -19,7 +19,3 @@ services:
         value: "3.13.0"
       - key: ASSESSMENT_MODE
         value: "True"
-      - key: ADMIN_USERNAME
-        value: grader
-      - key: ADMIN_PASSWORD
-        value: secret
