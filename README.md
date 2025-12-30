@@ -48,6 +48,25 @@ python manage.py runserver 127.0.0.1:8000
 
 Note: `weather_day_city` filter accepts dry|wet|snowy, e.g. `/api/v1/collisions?weather_day_city=snowy` (applies to stats too).
 
+Collision IDs note: Collision IDs are string keys from the source CSV (not sequential integers). Use the exact `collision_id` shown in list responses and in the example link on the home page.
+
+### cURL examples (Flags CRUD)
+
+```
+# Create a flag (replace <collision_id>)
+curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
+  -H "Content-Type: application/json" \
+  -d '{"collision":"<collision_id>","note":"hazard present"}'
+
+# Update the flag note (replace <id>)
+curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/<id>/ \
+  -H "Content-Type: application/json" \
+  -d '{"note":"updated note"}'
+
+# Delete the flag
+curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/<id>/
+```
+
 ## Datasets
 
 Place CSVs in `Data/` at repo root.

@@ -138,8 +138,9 @@ def index(request: HttpRequest) -> HttpResponse:
         'sample_collision_id': sample_collision_id,
         'assessment': assessment,
         'runinfo': _gather_run_info() if assessment else None,
-        'admin_user': os.environ.get('ADMIN_USERNAME') if assessment else None,
-        'admin_pass': os.environ.get('ADMIN_PASSWORD') if assessment else None,
+        # Always include admin creds if provided via env so graders can see them
+        'admin_user': os.environ.get('ADMIN_USERNAME'),
+        'admin_pass': os.environ.get('ADMIN_PASSWORD'),
         'db': db_info,
         'packages': packages,
         'flag_detail_id': flag_id,

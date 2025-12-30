@@ -88,3 +88,26 @@ def test_invalid_gust_min_param_returns_400():
     # Non-numeric gust_min should produce a 400 validation error from django-filter
     r = client.get('/api/v1/collisions/?gust_min=not-a-number')
     assert r.status_code == 400
+
+
+@pytest.mark.django_db
+def test_invalid_quadrant_returns_400():
+    # seed one record to ensure list endpoint is active
+    CollisionFactory()
+    client = APIClient()
+    r = client.get('/api/v1/collisions/?quadrant=BAD')
+    assert r.status_code == 400
+
+
+@pytest.mark.django_db
+def test_page_size_capped_to_200():
+    # create more than 200 records
+    for _ in range(220):
+        CollisionFactory()
+    client = APIClient()
+    r = client.get('/api/v1/collisions/?page_size=500')
+    assert r.status_code == 200
+    data = r.json()
+    assert 'results' in data
+    # capped to 200 by DefaultPagination
+    assert len(data['results']) == 200
