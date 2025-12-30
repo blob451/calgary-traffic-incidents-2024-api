@@ -16,8 +16,6 @@ def test_index_shows_runinfo_and_db_info(monkeypatch):
 
     # Run info markers
     assert 'OpenAPI JSON' in body
-    assert 'Admin username' in body
-    assert 'Admin password' in body
 
     # DB info marker
     assert 'Database engine' in body

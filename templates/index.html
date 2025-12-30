@@ -54,8 +54,6 @@
         <li>Django: <strong>{{ runinfo.django }}</strong></li>
         <li>DRF: <strong>{{ runinfo.drf }}</strong></li>
         <li>OpenAPI JSON: <a href="/api/schema/">/api/schema/</a></li>
-        {% if admin_user %}<li>Admin username: <strong>{{ admin_user }}</strong></li>{% endif %}
-        {% if admin_pass %}<li>Admin password: <strong>{{ admin_pass }}</strong></li>{% endif %}
       </ul>
       <details>
         <summary>Commands (seed/tests)</summary>
