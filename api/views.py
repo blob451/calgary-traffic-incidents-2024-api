@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
 from django.urls import reverse
 from django.db import connection
+from django.db.models import Subquery, OuterRef
 
 from core.models import (
     Collision,
@@ -413,17 +414,30 @@ class StatsTopIntersections(APIView):
         limit = max(1, min(limit, 100))
 
         qs = _filtered_collisions(request).exclude(intersection_key="")
+
+        # Choose a representative label per intersection_key: the most frequent
+        label_subq = (
+            qs.filter(intersection_key=OuterRef("intersection_key"))
+            .values("location_text")
+            .annotate(freq=Count("collision_id"))
+            .order_by("-freq", "location_text")
+            .values("location_text")[:1]
+        )
+
+        # Aggregate strictly by intersection_key, attach representative label
         data = (
-            qs.values("intersection_key", "location_text")
-            .annotate(total=Sum("count"), n=Count("collision_id"))
+            qs.values("intersection_key")
+            .annotate(total=Sum("count"), collisions=Count("collision_id"))
+            .annotate(location_text=Subquery(label_subq))
             .order_by("-total", "location_text")[:limit]
         )
+
         out = [
             {
                 "intersection_key": row["intersection_key"],
-                "location_text": row["location_text"],
+                "location_text": row.get("location_text") or "",
                 "total": int(row["total"] or 0),
-                "collisions": int(row["n"] or 0),
+                "collisions": int(row["collisions"] or 0),
             }
             for row in data
         ]
