@@ -45,6 +45,22 @@ def _gather_run_info():
     except Exception:
         return None
 
+
+def _assessment_from_request(request: HttpRequest) -> bool:
+    """Derive assessment mode: cookie overrides env var for convenience.
+
+    - Cookie name: 'assessment' with values in {1,true,yes,on} to enable
+    - Env fallback: ASSESSMENT_MODE in {1,true,yes}
+    """
+    try:
+        c = request.COOKIES.get('assessment')
+        if c is not None:
+            s = str(c).strip().lower()
+            return s in ('1', 'true', 'yes', 'on')
+    except Exception:
+        pass
+    return os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
+
 def _parse_requirements(requirements_path: str, max_items: int = 12):
     pkgs = []
     try:
@@ -79,7 +95,7 @@ def index(request: HttpRequest) -> HttpResponse:
         .first()
     )
 
-    assessment = os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
+    assessment = _assessment_from_request(request)
 
     # DB info for hosted verification
     try:
@@ -559,7 +575,7 @@ class CollisionsNear(APIView):
 
 
 def assessment_create_sample_flag(request: HttpRequest):
-    assessment = os.environ.get('ASSESSMENT_MODE', '').lower() in ('1', 'true', 'yes')
+    assessment = _assessment_from_request(request)
     if not assessment:
         return redirect('/')
     from core.models import Flag
@@ -570,3 +586,19 @@ def assessment_create_sample_flag(request: HttpRequest):
             if ser.is_valid():
                 ser.save()
     return redirect('/api/v1/flags')
+
+
+def assessment_toggle(request: HttpRequest):
+    """Toggle assessment cookie and redirect back to index.
+
+    This does not change server env; it only sets a cookie that overrides display.
+    """
+    current = request.COOKIES.get('assessment')
+    curr_on = str(current).strip().lower() in ('1', 'true', 'yes', 'on') if current is not None else _assessment_from_request(request)
+    new_val = '0' if curr_on else '1'
+    resp = redirect('/')
+    try:
+        resp.set_cookie('assessment', new_val, max_age=7*24*60*60, samesite='Lax')
+    except Exception:
+        resp.set_cookie('assessment', new_val)
+    return resp

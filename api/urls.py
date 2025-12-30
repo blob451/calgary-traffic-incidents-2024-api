@@ -9,6 +9,8 @@ router.register(r'api/v1/flags', views.FlagViewSet, basename='flags')
 urlpatterns = [
     path('', views.index, name='index'),
     path('', include(router.urls)),
+    # Assessment toggle (cookie-based)
+    path('assessment/toggle', views.assessment_toggle, name='assessment-toggle'),
     # Assessment helper to create a sample flag
     path('assessment/create-sample-flag', views.assessment_create_sample_flag, name='assessment-create-flag'),
     # Stats endpoints

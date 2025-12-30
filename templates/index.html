@@ -18,6 +18,11 @@
     </header>
 
     <section>
+      <h2>Mode</h2>
+      <p>Assessment mode: <strong>{% if assessment %}On{% else %}Off{% endif %}</strong> — <a href="/assessment/toggle">Toggle</a></p>
+    </section>
+
+    <section>
       <h2>Status</h2>
       <ul>
         <li>Collisions: <strong>{{ counts.collisions }}</strong></li>
