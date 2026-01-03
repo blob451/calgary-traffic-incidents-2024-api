@@ -1,28 +1,47 @@
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Calgary Traffic Incidents 2024 API</title>
+    <link rel="stylesheet" href="{% static 'dashboard.css' %}">
     <style>
       body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
       header { margin-bottom: 1rem; }
       code { background: #f5f5f5; padding: 0.1rem 0.3rem; border-radius: 3px; }
       ul { line-height: 1.7; }
     </style>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+      integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      window.addEventListener('load', function () {
+        if (!window.Chart) {
+          var fallback = document.createElement('script');
+          fallback.src = "{% static 'chart.umd.min.js' %}";
+          document.head.appendChild(fallback);
+        }
+      });
+    </script>
+    <script defer src="{% static 'dashboard.js' %}"></script>
   </head>
   <body>
     <header>
       <h1>Calgary Traffic Incidents 2024 API</h1>
-      <p>Django + DRF with OpenAPI docs and example links.</p>
+      <p>Django + DRF with OpenAPI docs, example links, and a lightweight dashboard.</p>
     </header>
 
-    <section>
+    <section class="panel">
       <h2>Mode</h2>
       <p>Assessment mode: <strong>{% if assessment %}On{% else %}Off{% endif %}</strong> - <a href="/assessment/toggle">Toggle</a></p>
     </section>
 
-    <section>
+    <section class="panel">
       <h2>Status</h2>
       <ul>
         <li>Collisions: <strong>{{ counts.collisions }}</strong></li>
@@ -36,7 +55,7 @@
       </ul>
     </section>
 
-    <section>
+    <section class="panel">
       <h2>Docs</h2>
       <ul>
         <li><a href="/docs/">Swagger UI</a></li>
@@ -45,8 +64,296 @@
       </ul>
     </section>
 
+    <section class="panel dashboard">
+      <div class="dashboard-header">
+        <div>
+          <h2>Interactive Dashboard</h2>
+          <p>Filter collisions and instantly see stats, top locations, near collisions, and paginated records.</p>
+          <p class="hint">Tip: date filters accept <code>from</code>/<code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
+        </div>
+        <div class="dashboard-actions">
+          <button type="button" id="refresh-dashboard">Refresh data</button>
+        </div>
+      </div>
+      <div id="dashboard-alert" class="alert" role="status" aria-live="polite"></div>
+
+      <form id="filters-form" class="filters-grid">
+        <fieldset>
+          <legend>Filters</legend>
+          <label>
+            From
+            <input type="date" name="from_date" aria-label="From date" />
+          </label>
+          <label>
+            To
+            <input type="date" name="to_date" aria-label="To date" />
+          </label>
+          <label>
+            Quadrant
+            <select name="quadrant">
+              <option value="">Any</option>
+              <option value="NE">NE</option>
+              <option value="NW">NW</option>
+              <option value="SE">SE</option>
+              <option value="SW">SW</option>
+              <option value="UNK">Unknown</option>
+            </select>
+          </label>
+          <label>
+            Weather (city)
+            <select name="weather_day_city">
+              <option value="">Any</option>
+              <option value="dry">Dry</option>
+              <option value="wet">Wet</option>
+              <option value="snowy">Snowy</option>
+            </select>
+          </label>
+          <label>
+            Freeze day (city)
+            <select name="freeze_day_city">
+              <option value="">Any</option>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </label>
+          <label>
+            Heavy rain
+            <select name="heavy_rain">
+              <option value="">Any</option>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </label>
+          <label>
+            Heavy snow
+            <select name="heavy_snow">
+              <option value="">Any</option>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </label>
+          <label>
+            Min gust (km/h)
+            <input type="number" name="gust_min" min="0" step="1" aria-label="Minimum gust in kilometres per hour" />
+          </label>
+          <label>
+            Station (id, climate id, or name)
+            <input type="text" name="station" placeholder="3031092 or Intl" aria-label="Station id or name" />
+          </label>
+          <label>
+            Search text
+            <input type="text" name="search" placeholder="Description or location" aria-label="Search text" />
+          </label>
+          <label>
+            Hourly view
+            <select name="commute">
+              <option value="">All hours</option>
+              <option value="am">AM commute</option>
+              <option value="pm">PM commute</option>
+            </select>
+          </label>
+          <div class="filter-actions">
+            <button type="submit">Apply Filters</button>
+            <button type="button" id="reset-filters">Reset</button>
+          </div>
+        </fieldset>
+      </form>
+
+      <div class="charts-grid">
+        <article>
+          <h3>Monthly Trend</h3>
+          <canvas id="monthly-chart" width="400" height="250"></canvas>
+        </article>
+        <article>
+          <h3>By Hour</h3>
+          <canvas id="hourly-chart" width="400" height="250"></canvas>
+        </article>
+        <article>
+          <h3>Weekday</h3>
+          <canvas id="weekday-chart" width="400" height="250"></canvas>
+        </article>
+        <article>
+          <h3>Quadrant Share</h3>
+          <canvas id="quadrant-chart" width="400" height="250"></canvas>
+        </article>
+        <article>
+          <h3>By Weather</h3>
+          <canvas id="weather-chart" width="400" height="250"></canvas>
+        </article>
+      </div>
+
+      <div class="tables-grid">
+        <article>
+          <h3>Top Intersections</h3>
+          <div class="table-actions">
+            <label>
+              Limit
+              <input type="number" id="top-limit" value="10" min="1" max="50" step="1" aria-label="Top intersections limit" />
+            </label>
+            <div>
+              <button type="button" id="top-refresh">Refresh</button>
+              <button type="button" id="top-download">Download CSV</button>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Intersection</th>
+                <th>Description</th>
+                <th>Total</th>
+                <th>Collisions</th>
+              </tr>
+            </thead>
+            <tbody id="top-intersections-body">
+              <tr><td colspan="4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </article>
+        <article>
+          <h3>Collisions (paginated)</h3>
+          <div class="collisions-controls">
+            <div>
+              <label>
+                Page size
+                <select id="page-size">
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <button type="button" id="collisions-prev" disabled>&larr; Prev</button>
+              <button type="button" id="collisions-next" disabled>Next &rarr;</button>
+              <button type="button" id="collisions-download">Download CSV</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th data-sort-key="collision_id"><button type="button">ID</button></th>
+                  <th data-sort-key="occurred_at"><button type="button">Occurred</button></th>
+                  <th data-sort-key="quadrant"><button type="button">Quadrant</button></th>
+                  <th data-sort-key="count"><button type="button">Count</button></th>
+                  <th data-sort-key="location_text"><button type="button">Location</button></th>
+                  <th data-sort-key="station"><button type="button">Station</button></th>
+                </tr>
+              </thead>
+              <tbody id="collisions-body">
+                <tr><td colspan="6">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p id="collisions-hint" aria-live="polite">Select a row to view detail & flag actions.</p>
+        </article>
+      </div>
+
+      <article class="panel detail-panel" id="collision-detail" hidden>
+        <h3>Collision Detail</h3>
+        <pre id="collision-detail-content">Select a collision to see detail...</pre>
+        <form id="flag-form" hidden>
+          <input type="hidden" name="collision" id="flag-collision-id" />
+          <label>
+            Flag note
+            <textarea name="note" rows="2" maxlength="1000" required placeholder="Brief note"></textarea>
+          </label>
+          <div class="flag-actions">
+            <button type="submit">Create Flag</button>
+            <span id="flag-status" aria-live="polite"></span>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel">
+        <h3>Near Collisions</h3>
+        <form id="near-form" class="near-grid">
+          <label>
+            Latitude
+            <input type="number" step="0.0001" name="lat" value="51.045" required aria-label="Latitude" />
+          </label>
+          <label>
+            Longitude
+            <input type="number" step="0.0001" name="lon" value="-114.06" required aria-label="Longitude" />
+          </label>
+          <label>
+            Radius (km)
+            <input type="number" step="0.1" name="radius_km" value="1.5" min="0.1" max="10" aria-label="Radius in kilometres" />
+          </label>
+          <label>
+            Limit
+            <input type="number" step="1" name="limit" value="50" min="1" max="500" aria-label="Limit" />
+          </label>
+          <button type="submit">Find Nearby Collisions</button>
+        </form>
+        <div class="table-scroll" aria-live="polite">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Distance (km)</th>
+                <th>Occurred</th>
+                <th>Quadrant</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody id="near-body">
+              <tr><td colspan="5">Provide a coordinate to load data.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Example Endpoints</h2>
+      <p style="color:#555">Tip: date filters accept <code>from</code> and <code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
+      <p style="color:#666">Note: collision IDs are strings from the source CSV (not sequential integers).</p>
+      <ul>
+        <li><a href="/api/v1/collisions">List collisions</a></li>
+        <li><a href="/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE">Filter by date + quadrant</a></li>
+        <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
+        {% if sample_collision_id %}
+        <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
+        {% endif %}
+        <li><a href="/api/v1/flags">Flags (list)</a> - use Swagger UI to POST/PUT/DELETE | <a href="/assessment/create-sample-flag">Create sample flag</a></li>
+        {% if flag_detail_id %}<li><a href="/api/v1/flags/{{ flag_detail_id }}/">Sample flag detail</a></li>{% endif %}
+        <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
+        <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
+        <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
+        <li><a href="/api/v1/stats/quadrant-share">Stats: quadrant share</a></li>
+        <li><a href="/api/v1/stats/top-intersections?limit=10">Stats: top intersections</a></li>
+        <li><a href="/api/v1/stats/by-weather">Stats: by weather</a></li>
+        <li><a href="/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5">Near collisions (1.5 km)</a></li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Testing</h2>
+      <details>
+        <summary>How to run tests</summary>
+        <pre>pytest -q</pre>
+      </details>
+      <details>
+        <summary>cURL examples (Flags CRUD)</summary>
+        <pre># Create a flag (replace &lt;collision_id&gt;)
+curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
+  -H "Content-Type: application/json" \
+  -d '{"collision":"&lt;collision_id&gt;","note":"hazard present"}'
+
+# Update the flag note (replace &lt;id&gt;)
+curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/ \
+  -H "Content-Type: application/json" \
+  -d '{"note":"updated note"}'
+
+# Delete the flag
+curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/</pre>
+      </details>
+    </section>
+
     {% if assessment %}
-    <section>
+    <section class="panel">
       <h2>Run Info</h2>
       <ul>
         <li>OS: <strong>{{ runinfo.os }}</strong></li>
@@ -85,54 +392,8 @@ python manage.py runserver 127.0.0.1:8000</pre>
     </section>
     {% endif %}
 
-    <section>
-      <h2>Example Endpoints</h2>
-      <p style="color:#555">Tip: date filters accept <code>from</code> and <code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
-      <p style="color:#666">Note: collision IDs are strings from the source CSV (not sequential integers).</p>
-      <ul>
-        <li><a href="/api/v1/collisions">List collisions</a></li>
-        <li><a href="/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE">Filter by date + quadrant</a></li>
-        <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
-        {% if sample_collision_id %}
-        <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
-        {% endif %}
-        <li><a href="/api/v1/flags">Flags (list)</a> - use Swagger UI to POST/PUT/DELETE | <a href="/assessment/create-sample-flag">Create sample flag</a></li>
-        {% if flag_detail_id %}<li><a href="/api/v1/flags/{{ flag_detail_id }}/">Sample flag detail</a></li>{% endif %}
-        <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
-        <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
-        <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
-        <li><a href="/api/v1/stats/quadrant-share">Stats: quadrant share</a></li>
-        <li><a href="/api/v1/stats/top-intersections?limit=10">Stats: top intersections</a></li>
-        <li><a href="/api/v1/stats/by-weather">Stats: by weather</a></li>
-        <li><a href="/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5">Near collisions (1.5 km)</a></li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>Testing</h2>
-      <details>
-        <summary>How to run tests</summary>
-        <pre>pytest -q</pre>
-      </details>
-      <details>
-        <summary>cURL examples (Flags CRUD)</summary>
-        <pre># Create a flag (replace &lt;collision_id&gt;)
-curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
-  -H "Content-Type: application/json" \
-  -d '{"collision":"&lt;collision_id&gt;","note":"hazard present"}'
-
-# Update the flag note (replace &lt;id&gt;)
-curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/ \
-  -H "Content-Type: application/json" \
-  -d '{"note":"updated note"}'
-
-# Delete the flag
-curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/</pre>
-      </details>
-    </section>
-
     {% if assessment %}
-    <section>
+    <section class="panel">
       <h2>Admin</h2>
       <p><a href="/admin/">Django Admin</a> - use the credentials below (or see the report).</p>
       <ul>
@@ -142,4 +403,4 @@ curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/</pre>
     </section>
     {% endif %}
   </body>
-  </html>
+</html>
