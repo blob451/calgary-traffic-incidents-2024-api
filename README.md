@@ -73,6 +73,10 @@ Place CSVs in `Data/` at repo root.
 - Traffic: `Traffic_Incidents_*.csv` (City of Calgary)
 - Weather: `en_climate_daily_AB_*_2024_P1D.csv` (Environment Canada)
 
+Data sources:
+- Environment Canada historical climate data: https://climate.weather.gc.ca/historical_data/search_historic_data_e.html
+- City of Calgary Traffic Incidents (Open Data): https://data.calgary.ca/Transportation-Transit/Traffic-Incidents/35ra-9556/data_preview
+
 ## Testing
 
 ```

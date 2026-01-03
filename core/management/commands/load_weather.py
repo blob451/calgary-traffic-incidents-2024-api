@@ -77,27 +77,43 @@ class Command(BaseCommand):
         updated_stations = 0
         created_obs = 0
         updated_obs = 0
+        # light diagnostics
+        diag = {"rows_no_climate_id": 0, "rows_bad_date": 0}
 
         with transaction.atomic():
             for path in csv_files:
-                created_st, updated_st, c_obs, u_obs = self._load_file(path)
+                created_st, updated_st, c_obs, u_obs, d_no_id, d_bad_date = self._load_file(path)
                 created_stations += created_st
                 updated_stations += updated_st
                 created_obs += c_obs
                 updated_obs += u_obs
+                diag["rows_no_climate_id"] += d_no_id
+                diag["rows_bad_date"] += d_bad_date
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Stations created/updated: {created_stations}/{updated_stations}; Observations created/updated: {created_obs}/{updated_obs}"
             )
         )
+        try:
+            parts = []
+            if diag["rows_no_climate_id"]:
+                parts.append(f"no_climate_id={diag['rows_no_climate_id']}")
+            if diag["rows_bad_date"]:
+                parts.append(f"bad_date={diag['rows_bad_date']}")
+            if parts:
+                self.stdout.write(self.style.NOTICE(f"Row skips: {', '.join(parts)}"))
+        except Exception:
+            pass
         return 0
 
-    def _load_file(self, path: Path) -> tuple[int, int, int, int]:
+    def _load_file(self, path: Path) -> tuple[int, int, int, int, int, int]:
         created_st = 0
         updated_st = 0
         created_obs = 0
         updated_obs = 0
+        d_no_id = 0
+        d_bad_date = 0
 
         with path.open("r", encoding="utf-8-sig", newline="") as fh:
             reader = csv.DictReader(fh)
@@ -109,6 +125,7 @@ class Command(BaseCommand):
                 lat = _coerce_float(_get(row, ["Latitude (y)", "Latitude"]))
                 if not climate_id:
                     # Skip rows without climate id
+                    d_no_id += 1
                     continue
                 # Upsert station, ensuring required lon/lat on create
                 station = WeatherStation.objects.filter(climate_id=climate_id).first()
@@ -150,6 +167,7 @@ class Command(BaseCommand):
                     obs_date = _date(parts[0], parts[1], parts[2])
                 except Exception:
                     # Skip bad date
+                    d_bad_date += 1
                     continue
 
                 t_max = _coerce_float(_get(row, ["Max Temp"]))
@@ -202,4 +220,4 @@ class Command(BaseCommand):
                 else:
                     updated_obs += 1
 
-        return created_st, updated_st, created_obs, updated_obs
+        return created_st, updated_st, created_obs, updated_obs, d_no_id, d_bad_date

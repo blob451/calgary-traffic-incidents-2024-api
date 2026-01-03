@@ -122,6 +122,14 @@ class Command(BaseCommand):
         created = 0
         updated = 0
         skipped = 0
+        # light diagnostics for skip reasons
+        skip_reasons = {
+            "no_id": 0,
+            "invalid_coords": 0,
+            "out_of_bounds": 0,
+            "bad_start_dt": 0,
+            "exception": 0,
+        }
 
         with transaction.atomic():
             for path in files:
@@ -132,20 +140,24 @@ class Command(BaseCommand):
                             coll_id = row.get("id") or row.get("Id") or row.get("ID")
                             if not coll_id:
                                 skipped += 1
+                                skip_reasons["no_id"] += 1
                                 continue
 
                             lon = float(row.get("Longitude", "") or "nan")
                             lat = float(row.get("Latitude", "") or "nan")
                             if not (lon == lon and lat == lat):  # NaN check
                                 skipped += 1
+                                skip_reasons["invalid_coords"] += 1
                                 continue
                             if not in_bounds(lon, lat):
                                 skipped += 1
+                                skip_reasons["out_of_bounds"] += 1
                                 continue
 
                             occ = parse_dt_local(row.get("START_DT", "") or "")
                             if not occ:
                                 skipped += 1
+                                skip_reasons["bad_start_dt"] += 1
                                 continue
                             mod = parse_dt_local(row.get("MODIFIED_DT", "") or "")
 
@@ -194,6 +206,7 @@ class Command(BaseCommand):
                                 updated += 1
                         except Exception:
                             skipped += 1
+                            skip_reasons["exception"] += 1
                             continue
 
         self.stdout.write(
@@ -201,4 +214,11 @@ class Command(BaseCommand):
                 f"Collisions upserted: created={created}, updated={updated}, skipped={skipped}"
             )
         )
+        # Print a brief breakdown of skip reasons (stdout so it shows in CI logs)
+        try:
+            parts = ", ".join(f"{k}={v}" for k, v in skip_reasons.items() if v)
+            if parts:
+                self.stdout.write(self.style.NOTICE(f"Skip breakdown: {parts}"))
+        except Exception:
+            pass
         return 0
