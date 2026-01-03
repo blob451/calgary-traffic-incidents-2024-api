@@ -156,3 +156,64 @@ class ErrorSerializer(serializers.Serializer):
     # Optional field-wise errors when validation returns a dict of lists
     # Using generic mapping for docs clarity without over-constraining shape
     # e.g., {"from": ["Invalid date format"], "to": ["..."]}
+
+
+# --- Stats serializers (for OpenAPI docs) ---
+
+
+class StatsMonthlyItemSerializer(serializers.Serializer):
+    month = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
+class StatsMonthlyTrendResponseSerializer(serializers.Serializer):
+    results = StatsMonthlyItemSerializer(many=True)
+
+
+class StatsByHourItemSerializer(serializers.Serializer):
+    hour = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
+class StatsByHourResponseSerializer(serializers.Serializer):
+    results = StatsByHourItemSerializer(many=True)
+    commute = serializers.CharField(allow_null=True, required=False)
+
+
+class StatsWeekdayItemSerializer(serializers.Serializer):
+    weekday = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
+class StatsWeekdayResponseSerializer(serializers.Serializer):
+    results = StatsWeekdayItemSerializer(many=True)
+
+
+class StatsQuadrantShareItemSerializer(serializers.Serializer):
+    quadrant = serializers.CharField()
+    total = serializers.IntegerField()
+
+
+class StatsQuadrantShareResponseSerializer(serializers.Serializer):
+    results = StatsQuadrantShareItemSerializer(many=True)
+
+
+class StatsTopIntersectionsItemSerializer(serializers.Serializer):
+    intersection_key = serializers.CharField()
+    location_text = serializers.CharField(allow_blank=True)
+    total = serializers.IntegerField()
+    collisions = serializers.IntegerField()
+
+
+class StatsTopIntersectionsResponseSerializer(serializers.Serializer):
+    results = StatsTopIntersectionsItemSerializer(many=True)
+    limit = serializers.IntegerField()
+
+
+class StatsByWeatherItemSerializer(serializers.Serializer):
+    weather_day = serializers.CharField()
+    total = serializers.IntegerField()
+
+
+class StatsByWeatherResponseSerializer(serializers.Serializer):
+    results = StatsByWeatherItemSerializer(many=True)

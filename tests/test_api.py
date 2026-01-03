@@ -8,7 +8,9 @@ from core.models import Flag, WeatherDay
 @pytest.mark.django_db
 def test_collisions_list_detail_and_flag():
     c1 = CollisionFactory()
-    c2 = CollisionFactory()
+    # ensure a different date to avoid CityDailyWeather unique(date) collision
+    from datetime import timedelta
+    c2 = CollisionFactory(occurred_at=c1.occurred_at + timedelta(days=1))
     c3 = CollisionFactory()
 
     client = APIClient()

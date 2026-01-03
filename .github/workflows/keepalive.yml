@@ -1,0 +1,18 @@
+name: Render Keepalive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping deployed URL
+        run: |
+          set -e
+          URL="https://calgary-traffic-incidents-2024-api.onrender.com/"
+          echo "Pinging $URL"
+          curl -fsS -o /dev/null -w "%{http_code}\n" "$URL"

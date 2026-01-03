@@ -31,6 +31,12 @@ from .serializers import (
     FlagSerializer,
     CollisionNearSerializer,
     ErrorSerializer,
+    StatsMonthlyTrendResponseSerializer,
+    StatsByHourResponseSerializer,
+    StatsWeekdayResponseSerializer,
+    StatsQuadrantShareResponseSerializer,
+    StatsTopIntersectionsResponseSerializer,
+    StatsByWeatherResponseSerializer,
 )
 from .filters import CollisionFilter
 
@@ -169,9 +175,17 @@ class CollisionViewSet(viewsets.ReadOnlyModelViewSet):
         tags=['Collisions'],
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='NE|NW|SE|SW|UNK'),
-            OpenApiParameter(name='page_size', type=OpenApiTypes.INT, required=False, description='Override page size (max 200)'),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='Quadrant', enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, description='dry|wet|snowy', enum=['dry','wet','snowy']),
+            OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
+            OpenApiParameter(name='gust_min', type=OpenApiTypes.NUMBER, required=False),
+            OpenApiParameter(name='station', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='page_size', type=OpenApiTypes.INT, required=False, description='Override page size (max 200)')
         ],
         examples=[
             OpenApiExample('Filter by date & quadrant', value={'from': '2024-01-01', 'to': '2024-12-31', 'quadrant': 'NE'}),
@@ -258,14 +272,14 @@ class StatsMonthlyTrend(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsMonthlyTrendResponseSerializer},
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='NE|NW|SE|SW|UNK'),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, description='dry|wet|snowy'),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, description='Quadrant', enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, description='dry|wet|snowy', enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
@@ -291,13 +305,15 @@ class StatsByHour(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsByHourResponseSerializer},
         parameters=[
-            OpenApiParameter(name='commute', type=OpenApiTypes.STR, required=False, description='am|pm'),
+            OpenApiParameter(name='commute', type=OpenApiTypes.STR, required=False, description='am|pm', enum=['am','pm']),
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
@@ -330,12 +346,14 @@ class StatsWeekday(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsWeekdayResponseSerializer},
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
@@ -359,12 +377,14 @@ class StatsQuadrantShare(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsQuadrantShareResponseSerializer},
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
@@ -390,13 +410,15 @@ class StatsTopIntersections(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsTopIntersectionsResponseSerializer},
         parameters=[
             OpenApiParameter(name='limit', type=OpenApiTypes.INT, required=False),
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
@@ -450,12 +472,14 @@ class StatsByWeather(APIView):
 
     @extend_schema(
         tags=['Stats'],
-        responses=OpenApiTypes.OBJECT,
+        responses={200: StatsByWeatherResponseSerializer},
         parameters=[
             OpenApiParameter(name='from', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='from_date', type=OpenApiTypes.DATE, required=False),
             OpenApiParameter(name='to', type=OpenApiTypes.DATE, required=False),
-            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False),
-            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False),
+            OpenApiParameter(name='to_date', type=OpenApiTypes.DATE, required=False),
+            OpenApiParameter(name='quadrant', type=OpenApiTypes.STR, required=False, enum=['NE','NW','SE','SW','UNK']),
+            OpenApiParameter(name='weather_day_city', type=OpenApiTypes.STR, required=False, enum=['dry','wet','snowy']),
             OpenApiParameter(name='freeze_day_city', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_rain', type=OpenApiTypes.BOOL, required=False),
             OpenApiParameter(name='heavy_snow', type=OpenApiTypes.BOOL, required=False),
