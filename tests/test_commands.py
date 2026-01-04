@@ -3,7 +3,7 @@ import textwrap
 
 from django.core.management import call_command
 
-from core.models import WeatherStation, WeatherObservation, Collision
+from core.models import WeatherStation, WeatherObservation, Collision, WeatherDay
 
 
 def test_load_weather_command_small(tmp_path, db, settings):
@@ -41,3 +41,42 @@ def test_load_collisions_command_small(tmp_path, db, settings):
     assert Collision.objects.filter(collision_id="COLL-1", count=1).exists()
     assert Collision.objects.filter(collision_id="COLL-2", count=2).exists()
 
+
+def test_load_weather_handles_trace_and_missing(tmp_path, db, settings):
+    data = textwrap.dedent(
+        '''\
+        "Longitude (x)","Latitude (y)","Station Name","Climate ID","Date/Time","Total Precip (mm)","Total Snow (cm)","Min Temp (A�C)"
+        "-114.01","51.12","CALGARY INTL A","3031999","2024-02-01","T","0.0","-0.5"
+        "-114.01","51.12","CALGARY INTL A","","2024-02-02","0.3","T","-1.0"
+        "-114.01","51.12","CALGARY INTL A","3031999","bad-date","0.0","0.0","-5.0"
+        '''
+    )
+    (tmp_path / "en_climate_daily_AB_3031999_2024_P1D.csv").write_text(data, encoding="utf-8")
+
+    call_command("load_weather", "--dir", str(tmp_path))
+
+    station = WeatherStation.objects.get(climate_id="3031999")
+    obs = WeatherObservation.objects.get(station=station, date="2024-02-01")
+    assert obs.total_precip_mm == 0.0
+    assert obs.total_snow_cm == 0.0
+    assert obs.weather_day == WeatherDay.DRY
+    assert obs.freeze_day is True
+
+
+def test_load_collisions_skip_reasons(tmp_path, db, settings, capsys):
+    data = textwrap.dedent(
+        '''\
+        "INCIDENT INFO","DESCRIPTION","START_DT","MODIFIED_DT","QUADRANT","Longitude","Latitude","Count","id","Point"
+        "No Id","Desc","2024/01/02 01:00:00 AM","2024/01/02 01:05:00 AM","SE","-114.0","50.9","1","","POINT (-114 50.9)"
+        "Bad Coords","Desc","2024/01/02 01:00:00 AM","2024/01/02 01:05:00 AM","NW","nan","50.9","1","BAD-1","POINT (-114 50.9)"
+        "Good","Desc","2024/01/02 01:00:00 AM","2024/01/02 01:05:00 AM","NE","-114.02","50.95","","GOOD-1","POINT (-114.02 50.95)"
+        '''
+    )
+    f = tmp_path / "Traffic_Incidents_Sample.csv"
+    f.write_text(data, encoding="utf-8")
+
+    call_command("load_collisions", "--csv", str(f))
+
+    captured = capsys.readouterr().out
+    assert "no_id=1" in captured and "invalid_coords=1" in captured
+    assert Collision.objects.filter(collision_id="GOOD-1", count=1).exists()

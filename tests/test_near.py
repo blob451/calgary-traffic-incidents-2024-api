@@ -47,3 +47,19 @@ def test_near_datetime_format_matches_list():
 
     # Formats should be identical strings (normalized by serializer)
     assert occurred_near == occurred_list
+
+
+@pytest.mark.django_db
+def test_near_radius_and_limit_clamped():
+    client = APIClient()
+    lat0, lon0 = 51.05, -114.05
+    c = CollisionFactory(latitude=lat0 + 0.005, longitude=lon0)
+    CollisionFactory(latitude=lat0 + 0.2, longitude=lon0)
+
+    resp = client.get(f"/api/v1/collisions/near?lat={lat0}&lon={lon0}&radius_km=0&limit=2000")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload['params']['radius_km'] == 1.0
+    assert payload['params']['limit'] == 500
+    ids = {row['collision_id'] for row in payload['results']}
+    assert c.collision_id in ids

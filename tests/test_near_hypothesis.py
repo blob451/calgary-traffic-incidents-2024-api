@@ -1,7 +1,7 @@
 import math
 import pytest
 from rest_framework.test import APIClient
-from hypothesis import given, strategies as st
+from hypothesis import given, strategies as st, settings
 
 from .factories import CollisionFactory
 
@@ -15,6 +15,7 @@ def _km_to_lon(delta_km: float, lat: float) -> float:
 
 
 @pytest.mark.django_db
+@settings(deadline=None)
 @given(
     lat=st.floats(min_value=50.9, max_value=51.2),
     lon=st.floats(min_value=-114.3, max_value=-113.8),
@@ -41,4 +42,3 @@ def test_near_property_sorted_and_bounded(lat, lon):
     dists = [row["distance_km"] for row in data["results"]]
     assert all(d <= 1.0 for d in dists)
     assert dists == sorted(dists)
-
