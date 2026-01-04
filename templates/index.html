@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Calgary Traffic Incidents 2024 API</title>
-    <link rel="stylesheet" href="{% static 'dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard.css' %}" />
     <style>
       body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
       header { margin-bottom: 1rem; }
@@ -18,31 +18,21 @@
       integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
+      onerror="this.onerror=null;this.remove();var f=document.createElement('script');f.defer=true;f.src='{% static 'chart.umd.min.js' %}';document.head.appendChild(f);"
     ></script>
-    <script>
-      window.addEventListener('load', function () {
-        if (!window.Chart) {
-          var fallback = document.createElement('script');
-          fallback.src = "{% static 'chart.umd.min.js' %}";
-          document.head.appendChild(fallback);
-        }
-      });
-    </script>
     <script defer src="{% static 'dashboard.js' %}"></script>
   </head>
   <body>
     <header>
       <h1>Calgary Traffic Incidents 2024 API</h1>
-      <p>Django + DRF with OpenAPI docs, example links, and a lightweight dashboard.</p>
+      <p>REST API for Calgary 2024 traffic incidents with interactive dashboard and OpenAPI docs.</p>
     </header>
 
     <section class="panel">
-      <h2>Mode</h2>
-      <p>Assessment mode: <strong>{% if assessment %}On{% else %}Off{% endif %}</strong> - <a href="/assessment/toggle">Toggle</a></p>
-    </section>
+      <h2>Project Overview</h2>
+      <p>Assessment mode: <strong>{% if assessment %}On{% else %}Off{% endif %}</strong> – <a href="/assessment/toggle">Toggle</a></p>
 
-    <section class="panel">
-      <h2>Status</h2>
+      <h3>Status</h3>
       <ul>
         <li>Collisions: <strong>{{ counts.collisions }}</strong></li>
         <li>Weather stations: <strong>{{ counts.stations }}</strong></li>
@@ -53,14 +43,92 @@
         <li>Database engine: <strong>{{ db.vendor }}</strong> ({{ db.name }})</li>
         {% endif %}
       </ul>
-    </section>
 
-    <section class="panel">
-      <h2>Docs</h2>
+      <h3>Run Info</h3>
+      {% if assessment %}
+      <ul>
+        <li>OS: <strong>{{ runinfo.os }}</strong></li>
+        <li>Python: <strong>{{ runinfo.python }}</strong></li>
+        <li>Django: <strong>{{ runinfo.django }}</strong></li>
+        <li>DRF: <strong>{{ runinfo.drf }}</strong></li>
+        <li>OpenAPI JSON: <a href="/api/schema/">/api/schema/</a></li>
+      </ul>
+      <details>
+        <summary>Commands (seed/tests)</summary>
+        <pre>python manage.py seed
+pytest -q</pre>
+      </details>
+      {% if packages %}
+      <details>
+        <summary>Key packages</summary>
+        <ul>
+          {% for p in packages %}
+          <li><code>{{ p.name }}</code>{% if p.version %}=={{ p.version }}{% endif %}</li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+      <details>
+        <summary>How to run from zip</summary>
+        <pre>python -m venv .venv
+./.venv/Scripts/Activate.ps1
+pip install -U pip
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py load_weather --dir Data/
+python manage.py load_collisions --csv Data/Traffic_Incidents_*.csv
+python manage.py build_city_weather
+python manage.py runserver 127.0.0.1:8000</pre>
+      </details>
+      <details>
+        <summary>Testing & cURL snippets</summary>
+        <pre>pytest -q
+
+# Create flag
+curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
+  -H "Content-Type: application/json" \
+  -d '{"collision":"<collision_id>","note":"hazard"}'
+
+# Update flag
+curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/<id>/ \
+  -H "Content-Type: application/json" \
+  -d '{"note":"updated note"}'
+
+# Delete flag
+curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/<id>/</pre>
+      </details>
+      {% else %}
+      <p>Assessment mode is off. Toggle it on from the Admin section to view environment details, package pins, and walkthrough commands.</p>
+      {% endif %}
+
+      <h3>Admin</h3>
+      <p><a href="/admin/">Django Admin</a> – See <em>Reproducibility - Admin Access</em> in the report for credentials.</p>
+          <h3>Docs</h3>
       <ul>
         <li><a href="/docs/">Swagger UI</a></li>
         <li><a href="/redoc/">Redoc</a></li>
         <li><a href="/api/schema/">OpenAPI JSON</a></li>
+      </ul>
+    </section>
+    
+    <section class="panel">
+      <h2>Endpoints</h2>
+      <ul>
+        <li><a href="/api/v1/collisions">List collisions</a></li>
+        <li><a href="/api/v1/collisions?from_date=2024-01-01&amp;to_date=2024-12-31&amp;quadrant=NE">Filter by date + quadrant</a></li>
+        <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
+        {% if sample_collision_id %}
+        <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
+        {% endif %}
+        <li><a href="/api/v1/flags">Flags (list)</a> – use Swagger UI to POST/PUT/DELETE | <a href="/assessment/create-sample-flag">Create sample flag</a></li>
+        {% if flag_detail_id %}<li><a href="/api/v1/flags/{{ flag_detail_id }}/">Sample flag detail</a></li>{% endif %}
+        <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
+        <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
+        <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
+        <li><a href="/api/v1/stats/quadrant-share">Stats: quadrant share</a></li>
+        <li><a href="/api/v1/stats/top-intersections?limit=10">Stats: top intersections</a></li>
+        <li><a href="/api/v1/stats/by-weather">Stats: by weather</a></li>
+        <li><a href="/api/v1/collisions/near?lat=51.045&amp;lon=-114.06&amp;radius_km=1.5">Near collisions (1.5 km)</a></li>
       </ul>
     </section>
 
@@ -70,6 +138,9 @@
           <h2>Interactive Dashboard</h2>
           <p>Filter collisions and instantly see stats, top locations, near collisions, and paginated records.</p>
           <p class="hint">Tip: date filters accept <code>from</code>/<code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
+          {% if not assessment %}
+          <p class="hint">Turn on assessment mode for additional telemetry, but the dashboard is available in either mode.</p>
+          {% endif %}
         </div>
         <div class="dashboard-actions">
           <button type="button" id="refresh-dashboard">Refresh data</button>
@@ -246,7 +317,7 @@
               </tbody>
             </table>
           </div>
-          <p id="collisions-hint" aria-live="polite">Select a row to view detail & flag actions.</p>
+          <p id="collisions-hint" aria-live="polite">Select a row to view detail &amp; flag actions.</p>
         </article>
       </div>
 
@@ -305,102 +376,6 @@
         </div>
       </article>
     </section>
-
-    <section class="panel">
-      <h2>Example Endpoints</h2>
-      <p style="color:#555">Tip: date filters accept <code>from</code> and <code>to</code> aliases for <code>from_date</code>/<code>to_date</code>.</p>
-      <p style="color:#666">Note: collision IDs are strings from the source CSV (not sequential integers).</p>
-      <ul>
-        <li><a href="/api/v1/collisions">List collisions</a></li>
-        <li><a href="/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE">Filter by date + quadrant</a></li>
-        <li><a href="/api/v1/collisions?weather_day_city=snowy">Filter by city weather (snowy)</a></li>
-        {% if sample_collision_id %}
-        <li><a href="/api/v1/collisions/{{ sample_collision_id }}/">Sample collision detail ({{ sample_collision_id }})</a></li>
-        {% endif %}
-        <li><a href="/api/v1/flags">Flags (list)</a> - use Swagger UI to POST/PUT/DELETE | <a href="/assessment/create-sample-flag">Create sample flag</a></li>
-        {% if flag_detail_id %}<li><a href="/api/v1/flags/{{ flag_detail_id }}/">Sample flag detail</a></li>{% endif %}
-        <li><a href="/api/v1/stats/monthly-trend">Stats: monthly trend</a></li>
-        <li><a href="/api/v1/stats/by-hour?commute=am">Stats: by hour (AM commute)</a></li>
-        <li><a href="/api/v1/stats/weekday">Stats: weekday</a></li>
-        <li><a href="/api/v1/stats/quadrant-share">Stats: quadrant share</a></li>
-        <li><a href="/api/v1/stats/top-intersections?limit=10">Stats: top intersections</a></li>
-        <li><a href="/api/v1/stats/by-weather">Stats: by weather</a></li>
-        <li><a href="/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5">Near collisions (1.5 km)</a></li>
-      </ul>
-    </section>
-
-    <section class="panel">
-      <h2>Testing</h2>
-      <details>
-        <summary>How to run tests</summary>
-        <pre>pytest -q</pre>
-      </details>
-      <details>
-        <summary>cURL examples (Flags CRUD)</summary>
-        <pre># Create a flag (replace &lt;collision_id&gt;)
-curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
-  -H "Content-Type: application/json" \
-  -d '{"collision":"&lt;collision_id&gt;","note":"hazard present"}'
-
-# Update the flag note (replace &lt;id&gt;)
-curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/ \
-  -H "Content-Type: application/json" \
-  -d '{"note":"updated note"}'
-
-# Delete the flag
-curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/&lt;id&gt;/</pre>
-      </details>
-    </section>
-
-    {% if assessment %}
-    <section class="panel">
-      <h2>Run Info</h2>
-      <ul>
-        <li>OS: <strong>{{ runinfo.os }}</strong></li>
-        <li>Python: <strong>{{ runinfo.python }}</strong></li>
-        <li>Django: <strong>{{ runinfo.django }}</strong></li>
-        <li>DRF: <strong>{{ runinfo.drf }}</strong></li>
-        <li>OpenAPI JSON: <a href="/api/schema/">/api/schema/</a></li>
-      </ul>
-      <details>
-        <summary>Commands (seed/tests)</summary>
-        <pre>python manage.py seed
-pytest -q</pre>
-      </details>
-      {% if packages %}
-      <details>
-        <summary>Key packages</summary>
-        <ul>
-          {% for p in packages %}
-          <li><code>{{ p.name }}</code>{% if p.version %}=={{ p.version }}{% endif %}</li>
-          {% endfor %}
-        </ul>
-      </details>
-      {% endif %}
-      <details>
-        <summary>How to run from zip</summary>
-        <pre>python -m venv .venv
-./.venv/Scripts/Activate.ps1
-pip install -U pip
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py load_weather --dir Data/
-python manage.py load_collisions --csv Data/Traffic_Incidents_*.csv
-python manage.py build_city_weather
-python manage.py runserver 127.0.0.1:8000</pre>
-      </details>
-    </section>
-    {% endif %}
-
-    {% if assessment %}
-    <section class="panel">
-      <h2>Admin</h2>
-      <p><a href="/admin/">Django Admin</a> - use the credentials below (or see the report).</p>
-      <ul>
-        <li>Admin username: <strong>{{ admin_user|default:"admin" }}</strong></li>
-        <li>Admin password: <strong>{{ admin_pass|default:"cm3035" }}</strong></li>
-      </ul>
-    </section>
-    {% endif %}
   </body>
 </html>
+
