@@ -1,81 +1,78 @@
-# Calgary Traffic Incidents 2024 API
+﻿# Calgary Traffic Incidents 2024 API
 
-Django + Django REST Framework API for Calgary (YYC) 2024 traffic incidents, enriched with daily weather data from five nearby stations. Ships with loaders, OpenAPI docs, and a small test suite.
+REST API (Django + DRF) for Calgary (YYC) 2024 traffic incidents, enriched with city daily weather derived from nearby stations. Includes loaders, OpenAPI docs, a dashboard, and tests.
 
 ## Quick Start
 
-- Prereqs: Python 3.12+ (3.13 preferred), `pip`
-- Clone this repo, then from the repo root:
+- Python 3.12+ (3.13 preferred)
+- From repo root:
 
 ```
 python -m venv .venv
-./.venv/Scripts/Activate.ps1   # PowerShell
+./.venv/Scripts/Activate.ps1  # PowerShell
 pip install -U pip
 pip install -r requirements.txt
 
-# First run: create DB schema
+# Create DB schema
 python manage.py migrate
 
-# Load datasets (expects CSVs under Data/)
+# Load datasets (place CSVs in Data/)
 python manage.py load_weather --dir Data/
 python manage.py load_collisions --csv Data/Traffic_Incidents_*.csv
 python manage.py build_city_weather
 
-# Run server
+# Run the server
 python manage.py runserver 127.0.0.1:8000
 ```
 
-- Open: `http://127.0.0.1:8000/`
-  - Swagger UI: `/docs/`
-  - Redoc: `/redoc/`
-  - OpenAPI JSON: `/api/schema/`
+Open: `http://127.0.0.1:8000/`
 
-## Example Endpoints
+## Homepage
 
-- List collisions: `/api/v1/collisions` (supports pagination, search, ordering)
-- Filtered list: `/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE`
-- Detail by ID: `/api/v1/collisions/{collision_id}`
-- Create flag: POST `/api/v1/flags` with JSON `{ "collision": "{collision_id}", "note": "text" }`
-  - Flags support retrieve/update/delete at `/api/v1/flags/{id}` (use Swagger UI to try PUT/PATCH/DELETE).
-- Stats:
-  - Monthly: `/api/v1/stats/monthly-trend`
-  - By hour: `/api/v1/stats/by-hour?commute=am`
-  - Weekday: `/api/v1/stats/weekday`
-  - Quadrants: `/api/v1/stats/quadrant-share`
-  - Top intersections: `/api/v1/stats/top-intersections?limit=10`
-  - By weather: `/api/v1/stats/by-weather`
-- Near collisions: `/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5`
+- Overview (single panel)
+  - Assessment toggle (cookie-based)
+  - Status (record counts + DB engine)
+  - Run Info (on when assessment is on: OS, Python, Django/DRF, setup/test snippets)
+  - Admin (link; credentials are in the report’s Reproducibility section)
+  - Docs (Swagger, Redoc, OpenAPI JSON)
+- Endpoints: quick links to common API calls
+- Dashboard: filters, charts, top intersections, paginated collisions, near collisions
 
-Note: `weather_day_city` filter accepts dry|wet|snowy, e.g. `/api/v1/collisions?weather_day_city=snowy` (applies to stats too).
+Tip: Assessment mode only reveals diagnostic context; API behavior is unchanged. It defaults off for safety and can be toggled from the homepage.
 
-Collision IDs note: Collision IDs are string keys from the source CSV (not sequential integers). Use the exact `collision_id` shown in list responses and in the example link on the home page.
+## API Examples
 
-### cURL examples (Flags CRUD)
+- List: `/api/v1/collisions`
+- Filter: `/api/v1/collisions?from_date=2024-01-01&to_date=2024-12-31&quadrant=NE`
+- Detail: `/api/v1/collisions/{collision_id}` (IDs are strings from the source CSV)
+- Flags: `/api/v1/flags` (+ CRUD via Swagger UI)
+- Stats: `/api/v1/stats/monthly-trend`, `/api/v1/stats/by-hour?commute=am`, `/api/v1/stats/weekday`, `/api/v1/stats/quadrant-share`, `/api/v1/stats/top-intersections?limit=10`, `/api/v1/stats/by-weather`
+- Near: `/api/v1/collisions/near?lat=51.045&lon=-114.06&radius_km=1.5`
+
+`weather_day_city` accepts dry|wet|snowy and applies to list and stats.
+
+### cURL (Flags)
 
 ```
-# Create a flag (replace <collision_id>)
+# Create
 curl -s -X POST http://127.0.0.1:8000/api/v1/flags/ \
   -H "Content-Type: application/json" \
-  -d '{"collision":"<collision_id>","note":"hazard present"}'
+  -d '{"collision":"<collision_id>","note":"hazard"}'
 
-# Update the flag note (replace <id>)
+# Update
 curl -s -X PATCH http://127.0.0.1:8000/api/v1/flags/<id>/ \
   -H "Content-Type: application/json" \
   -d '{"note":"updated note"}'
 
-# Delete the flag
+# Delete
 curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/<id>/
 ```
 
-## Datasets
+## Data
 
-Place CSVs in `Data/` at repo root.
+Put CSVs under `Data/`:
 - Traffic: `Traffic_Incidents_*.csv` (City of Calgary)
 - Weather: `en_climate_daily_AB_*_2024_P1D.csv` (Environment Canada)
-
-Data sources:
-- Environment Canada historical climate data: https://climate.weather.gc.ca/historical_data/search_historic_data_e.html
-- City of Calgary Traffic Incidents (Open Data): https://data.calgary.ca/Transportation-Transit/Traffic-Incidents/35ra-9556/data_preview
 
 ## Testing
 
@@ -83,17 +80,17 @@ Data sources:
 pytest -q
 ```
 
-Tests cover models (uniques), loaders (tiny CSV fixtures), API list/detail/flags/filters, stats, and near.
+Generates test and (if enabled) coverage reports in `reports/`.
 
-## OpenAPI Schema Export
+## Schema
 
-Export `schema.yaml` for submission or documentation:
+Export OpenAPI to `schema.yaml`:
 
 ```
 python manage.py spectacular --file schema.yaml
 ```
 
-## Admin Access
+## Admin
 
 Create a local superuser for browsing admin:
 
@@ -101,23 +98,25 @@ Create a local superuser for browsing admin:
 python manage.py createsuperuser
 ```
 
-Include admin credentials in the report (do not commit credentials).
+Public credentials are not displayed on the homepage. See the report’s Reproducibility section.
 
-## Submission Notes
+## Scripts
 
-- Keep `db.sqlite3` out of Git during development.
-- For the submission/production branch: run loaders, then include the pre-seeded `db.sqlite3` to ease grading (force-add if necessary). Do not include secrets.
-- Include `schema.yaml` export and ensure `/` links to `/docs` for full marks.
+- Smoke check: `python scripts/smoke_check.py`
+  - A small root stub `smoke_check.py` remains for compatibility (imports and calls the script’s main when run directly).
 
-## Structure
+## Repository Layout
 
-- `calgary_collisions/` – project (settings/urls)
-- `core/` – models + management commands (loaders, city aggregate)
-- `api/` – serializers, viewsets, filters, URLs, views (stats, near)
-- `templates/` – index page linking to docs and examples
-- `tests/` – pytest + factories
-- `Data/` – CSVs (tracked)
+- `calgary_collisions/` – project config (settings/urls)
+- `core/` – models and management commands (loaders, city aggregate)
+- `api/` – serializers, filters, viewsets, views (stats, near), URLs
+- `templates/` – homepage template
+- `static/` – dashboard assets
+- `tests/` – pytest suite + factories
+- `scripts/` – utility scripts (e.g., smoke_check)
+- `Data/` – CSVs (local only, not required for tests)
 
-## License
+## Notes
 
-MIT (see LICENSE)
+- Keep secrets out of the repo. For local development, use environment variables.
+- Assessment mode is cookie-based and defaults off; toggle from the homepage.

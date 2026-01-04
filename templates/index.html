@@ -18,8 +18,21 @@
       integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
-      onerror="this.onerror=null;this.remove();var f=document.createElement('script');f.defer=true;f.src='{% static 'chart.umd.min.js' %}';document.head.appendChild(f);"
     ></script>
+    <script>
+      // Fallback: if CDN failed, load local Chart and re-trigger dashboard refresh
+      window.addEventListener("load", function () {
+        try {
+          if (!window.Chart) {
+            var s = document.createElement("script");
+            s.defer = true;
+            s.src = "{% static 'chart.umd.min.js' %}";
+            s.onload = function(){ var b = document.getElementById("refresh-dashboard"); if (b) { try { b.click(); } catch(e){} } };
+            document.head.appendChild(s);
+          }
+        } catch (e) { /* no-op */ }
+      });
+    </script>
     <script defer src="{% static 'dashboard.js' %}"></script>
   </head>
   <body>
@@ -378,4 +391,6 @@ curl -s -X DELETE http://127.0.0.1:8000/api/v1/flags/<id>/</pre>
     </section>
   </body>
 </html>
+
+
 
